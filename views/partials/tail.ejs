@@ -1,0 +1,18 @@
+<div class="full-profile-modal" id="fullProfileModal" data-full-profile-modal data-testid="profile-modal" hidden>
+  <div class="full-profile-backdrop" data-full-profile-close data-testid="profile-backdrop"></div>
+  <section class="full-profile-card gradient-card" role="dialog" aria-modal="true" aria-label="Profile view" aria-labelledby="fullProfileTitle" data-testid="profile-modal-card">
+    <button type="button" class="full-profile-close chip" aria-label="Close profile" data-full-profile-close data-testid="profile-close-button">Close</button>
+    <div class="full-profile-shell" id="fullProfileShell" data-testid="full-profile-shell">
+      <div class="full-profile-loading" id="fullProfileLoading">
+        <div class="profile-banner skeleton"></div>
+        <div class="profile-avatar skeleton"></div>
+        <div class="profile-line skeleton"></div>
+        <div class="profile-line short skeleton"></div>
+      </div>
+      <div id="fullProfileLayout" data-testid="full-profile-layout" hidden></div>
+    </div>
+  </section>
+</div>
+<script src="/public/js/main.js" defer></script>
+</body>
+</html>

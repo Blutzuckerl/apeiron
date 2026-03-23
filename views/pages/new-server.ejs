@@ -1,0 +1,92 @@
+<%- include('../partials/head', { title }) %>
+<div class="app-bg"></div>
+<main class="app-shell">
+  <%- include('../partials/flash') %>
+
+  <section class="workspace-grid">
+    <%- include('../partials/server-rail', { servers, selectedServer }) %>
+
+    <aside class="nav-rail gradient-card with-userbar">
+      <div class="nav-rail-scroll">
+      <h3>New Server</h3>
+      <p class="sub">Create your own space or explore public servers.</p>
+      <a class="btn" href="/app/home">Zurück</a>
+      </div>
+      <%- include('../partials/sidebar-userbar') %>
+    </aside>
+
+    <section class="chat-main gradient-card">
+      <header class="chat-head">
+        <h2>New Server</h2>
+        <div class="head-badges">
+          <span class="badge fancy">Create / Discover</span>
+        </div>
+      </header>
+
+      <div class="new-server-grid">
+        <article class="gradient-card new-server-card">
+          <h3>Create Server</h3>
+          <form method="post" action="/app/new-server/create" class="settings-form">
+            <label>Server Name
+              <input type="text" name="name" placeholder="z.B. Apeiron Lab" required />
+            </label>
+            <label>Description
+              <textarea name="description" rows="3" placeholder="Short server description"></textarea>
+            </label>
+            <label>Icon
+              <input type="text" disabled value="Optional upload folgt im nächsten Schritt" />
+            </label>
+            <label>Region/Locale
+              <input type="text" disabled value="Auto" />
+            </label>
+            <button class="btn primary" type="submit">Create</button>
+          </form>
+        </article>
+
+        <article class="gradient-card new-server-card">
+          <h3>Search Servers</h3>
+          <form method="get" action="/app/new-server" class="search-row">
+            <input type="search" name="q" value="<%= discoverQuery %>" placeholder="Find servers" />
+            <button class="btn" type="submit">Search</button>
+          </form>
+
+          <div class="list-head">Trending / Kategorien</div>
+          <div class="friends-tabs">
+            <span class="chip">Gaming</span>
+            <span class="chip">Study</span>
+            <span class="chip">Tech</span>
+            <span class="chip">Art</span>
+            <span class="chip">Local</span>
+          </div>
+
+          <div class="discover-list">
+            <% if (!discoverServers.length) { %>
+              <div class="cat-card">No servers found.</div>
+            <% } %>
+            <% discoverServers.forEach(function(server) { %>
+              <div class="dm-row">
+                <span class="avatar"><%= server.name.slice(0, 1).toUpperCase() %></span>
+                <div>
+                  <strong><%= server.name %></strong>
+                  <p><%= server.description || 'No description' %> • ~<%= server.member_count %> members</p>
+                </div>
+                <form method="post" action="/app/new-server/join">
+                  <input type="hidden" name="serverId" value="<%= server.id %>" />
+                  <button class="chip" type="submit">Join</button>
+                </form>
+              </div>
+            <% }) %>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <aside class="info-rail gradient-card">
+      <h3>Hints</h3>
+      <div class="cat-card">Create: erstellt Server + Default Channels.</div>
+      <div class="cat-card">Search: zeigt beitretbare Server.</div>
+      <div class="cat-card">Join: öffnet direkt die Server-Ansicht.</div>
+    </aside>
+  </section>
+</main>
+<%- include('../partials/tail') %>

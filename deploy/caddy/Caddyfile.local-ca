@@ -1,0 +1,12 @@
+# Strategy B: Local CA managed by Caddy (clients must trust this CA)
+# No public domain required.
+
+https://apeiron.local, https://172.29.40.90 {
+  tls internal
+
+  reverse_proxy 127.0.0.1:3000 {
+    header_up X-Forwarded-Proto {scheme}
+    header_up X-Forwarded-Host {host}
+    header_up X-Forwarded-For {remote}
+  }
+}

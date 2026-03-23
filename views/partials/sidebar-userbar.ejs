@@ -1,0 +1,31 @@
+<div class="sidebar-user-footer">
+  <a
+    class="sidebar-user-main"
+    href="/app/settings/profile"
+    title="Open Profile"
+    data-presence-user-id="<%= currentUser ? currentUser.id : '' %>"
+    data-presence-status="<%= currentUser?.effective_presence || 'offline' %>"
+    data-presence-last-seen="<%= currentUser?.presence_last_seen || '' %>"
+  >
+    <span class="sidebar-user-avatar">
+      <% if (currentUser && currentUser.avatar_url) { %>
+        <img src="<%= currentUser.avatar_url %>" alt="Avatar" />
+      <% } else { %>
+        <span><%= currentUser && currentUser.display_name ? currentUser.display_name.charAt(0).toUpperCase() : 'U' %></span>
+      <% } %>
+      <span class="status-dot sidebar-user-status <%= currentUser?.effective_presence || 'offline' %>" data-presence-dot></span>
+    </span>
+    <span class="sidebar-user-meta">
+      <strong><%= currentUser ? currentUser.display_name : 'User' %></strong>
+      <small>@<%= currentUser ? currentUser.username : 'unknown' %></small>
+    </span>
+  </a>
+  <button
+    type="button"
+    class="sidebar-user-settings"
+    title="View Profile"
+    data-testid="profile-open"
+    data-open-full-profile="<%= currentUser ? currentUser.id : '' %>"
+  >◫</button>
+  <a class="sidebar-user-settings" href="/app/settings/my-account" title="User Settings">⚙</a>
+</div>

@@ -1,0 +1,34 @@
+<%- include('../partials/head', { title }) %>
+<main class="auth-page">
+  <section class="auth-card gradient-card floaty">
+    <div class="auth-brand">
+      <img src="/public/ressources/Big.png" alt="Apeiron" />
+    </div>
+    <h1>Willkommen bei Apeiron</h1>
+    <p class="sub">Discord-ähnliche Plattform</p>
+    <%- include('../partials/flash') %>
+
+    <form method="post" action="/login" class="auth-form" id="loginForm" data-testid="login-form" novalidate>
+      <label>Email oder Username
+        <input type="text" name="identifier" value="<%= formValues && formValues.identifier ? formValues.identifier : '' %>" placeholder="einstein oder albert@apeiron.app" required data-testid="login-identifier-input" />
+      </label>
+      <label>Passwort
+        <input type="password" name="password" value="<%= formValues && formValues.password ? formValues.password : '' %>" placeholder="••••••••" required data-testid="login-password-input" />
+      </label>
+      <p class="inline-error" id="loginInlineError" data-testid="login-inline-error" <%= loginError ? '' : 'hidden' %>><%= loginError || '' %></p>
+      <label class="inline">
+        <input type="checkbox" name="remember" <%= formValues && formValues.remember ? 'checked' : '' %> data-testid="login-remember-input" /> Angemeldet bleiben
+      </label>
+      <button class="btn primary" type="submit" data-testid="login-submit">Einloggen</button>
+    </form>
+
+    <div class="auth-links">
+      <a href="/register">Registrierung</a>
+      <a href="/forgot-password">Passwort vergessen?</a>
+    </div>
+
+
+    <p class="hint">Seed-Login: <code>einstein</code> / <code>apeiron123!</code></p>
+  </section>
+</main>
+<%- include('../partials/tail') %>

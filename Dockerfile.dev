@@ -1,0 +1,20 @@
+FROM node:20-bookworm-slim
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+RUN mkdir -p /app/data
+
+ENV NODE_ENV=development
+ENV HOST=0.0.0.0
+ENV PORT=3000
+ENV HTTP_PORT=3000
+ENV HTTPS_PORT=3443
+ENV HTTPS_ENABLED=1
+ENV TLS_MODE=self-signed
+
+EXPOSE 3000 3443
+
+CMD ["npm", "run", "dev"]

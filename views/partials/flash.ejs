@@ -1,0 +1,13 @@
+<% if (flash && (flash.error || flash.success || flash.info)) { %>
+  <section class="flash-stack" aria-live="polite" data-testid="flash-stack">
+    <% (flash.error || []).forEach(function(msg) { %>
+      <div class="flash flash-error" data-testid="flash-error">🐾 <%= msg %></div>
+    <% }) %>
+    <% (flash.success || []).forEach(function(msg) { %>
+      <div class="flash flash-success" data-testid="flash-success">🐱 <%= msg %></div>
+    <% }) %>
+    <% (flash.info || []).forEach(function(msg) { %>
+      <div class="flash flash-info" data-testid="flash-info">😺 <%= msg %></div>
+    <% }) %>
+  </section>
+<% } %>

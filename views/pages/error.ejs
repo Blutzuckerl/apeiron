@@ -1,0 +1,16 @@
+<%- include('../partials/head', { title }) %>
+<main class="auth-page">
+  <section class="auth-card gradient-card">
+    <h1>Fehler <%= code %></h1>
+    <p><%= message %></p>
+    <div class="auth-links">
+      <% if (currentUser) { %>
+        <a href="/app/home">Zurück zur App</a>
+      <% } else { %>
+        <a href="/login">Zum Login</a>
+      <% } %>
+    </div>
+    <%- include('../partials/cat-states') %>
+  </section>
+</main>
+<%- include('../partials/tail') %>

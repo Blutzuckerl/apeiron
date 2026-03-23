@@ -1,0 +1,140 @@
+<% const composerScope = composerFormId === 'serverComposerForm' ? 'server' : 'dm'; %>
+<form method="post" action="<%= composerAction %>" class="composer gradient-card shared-composer-form" data-testid="<%= composerScope %>-composer" <%= composerFormId ? ('id="' + composerFormId + '"') : '' %>>
+  <input type="hidden" name="<%= composerContextFieldName %>" value="<%= composerContextFieldValue || '' %>" />
+  <input type="hidden" name="replyToMessageId" value="" data-composer-reply-id />
+  <input type="hidden" name="editMessageId" value="" data-composer-edit-id />
+  <div class="composer-mode-bar" data-composer-mode-bar hidden>
+    <div class="composer-mode-copy">
+      <strong data-composer-mode-title>Replying</strong>
+      <span data-composer-mode-preview></span>
+    </div>
+    <button type="button" class="chip" data-composer-clear-mode>Cancel</button>
+  </div>
+  <textarea
+    name="content"
+    placeholder="<%= composerPlaceholder %>"
+    data-testid="<%= composerScope %>-composer-input"
+    <%= composerDisabled ? 'disabled' : '' %>
+  ></textarea>
+  <input id="attachInput" type="file" multiple hidden data-testid="<%= composerScope %>-attach-input" />
+  <input id="customEmojiFileInput" type="file" accept="image/png,image/webp,image/gif" hidden data-testid="<%= composerScope %>-emoji-file-input" />
+  <div class="composer-actions">
+    <div class="composer-tools">
+      <button class="badge tool-btn" type="button" data-action="attach" data-testid="<%= composerScope %>-attach-button" <%= (composerDisabled || !composerCanUploadFiles) ? 'disabled' : '' %> title="<%= composerCanUploadFiles ? '' : 'Missing permission' %>">+ Attach</button>
+      <button class="badge tool-btn" type="button" data-action="emoji" data-testid="<%= composerScope %>-emoji-button" <%= composerDisabled ? 'disabled' : '' %>>😀 Emoji</button>
+      <button class="badge tool-btn" type="button" data-action="gif" data-testid="<%= composerScope %>-gif-button" <%= composerDisabled ? 'disabled' : '' %>>GIF</button>
+    </div>
+    <button class="btn primary" type="submit" data-testid="<%= composerScope %>-send-button" <%= composerDisabled ? 'disabled' : '' %>><%= composerSubmitLabel || 'Senden' %></button>
+  </div>
+  <div id="uploadQueue" class="upload-queue" aria-live="polite" data-testid="<%= composerScope %>-upload-queue"></div>
+
+  <div id="emojiPopover" class="emoji-popover" data-testid="<%= composerScope %>-emoji-popover" hidden>
+    <section id="emojiBrowseView" data-testid="<%= composerScope %>-emoji-browse-view">
+      <div class="emoji-topbar">
+        <input id="emojiSearchInput" type="search" placeholder="Find the perfect emoji" autocomplete="off" data-testid="<%= composerScope %>-emoji-search-input" />
+        <div class="composer-tools">
+          <button type="button" class="chip" id="emojiAddBtn" data-testid="<%= composerScope %>-emoji-add-button" <%= composerDisabled ? 'disabled' : '' %>>Add Emoji</button>
+          <button type="button" class="chip" data-close-emoji="true" data-testid="<%= composerScope %>-emoji-close">Schließen</button>
+        </div>
+      </div>
+      <div class="emoji-browser-layout">
+        <nav class="emoji-category-rail" id="emojiCategoryRail" aria-label="Emoji Kategorien" data-testid="<%= composerScope %>-emoji-category-rail">
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="favorites" title="Favorites">⭐</button>
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="recent" title="Recent">🕒</button>
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="people" title="People / Smileys">😀</button>
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="animals" title="Animals">🐱</button>
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="food" title="Food">🍕</button>
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="activities" title="Activities">⚽</button>
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="travel" title="Travel">✈️</button>
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="objects" title="Objects">💡</button>
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="symbols" title="Symbols">❤️</button>
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="flags" title="Flags">🏳️</button>
+          <button type="button" class="emoji-category-btn" data-emoji-category-target="custom" title="Custom">🧩</button>
+        </nav>
+        <div class="emoji-main-pane">
+          <div class="emoji-section-scroll" id="emojiSectionScroll" data-testid="<%= composerScope %>-emoji-section-scroll">
+            <div id="emojiSectionMount" data-testid="<%= composerScope %>-emoji-section-mount"></div>
+          </div>
+          <div class="emoji-bottom-bar" id="emojiSelectionPreview" data-testid="<%= composerScope %>-emoji-selection-preview">
+            <span class="emoji-bottom-visual" data-emoji-preview-visual>🙂</span>
+            <div class="emoji-bottom-copy">
+              <strong data-emoji-preview-label>No emoji selected</strong>
+              <span data-emoji-preview-token>Pick an emoji to preview it</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="emojiAddView" data-testid="<%= composerScope %>-emoji-add-view" hidden>
+      <div class="emoji-upload-row wizard">
+        <input type="text" id="emojiNameInput" placeholder="name (z.B. cat_spin)" maxlength="32" data-testid="<%= composerScope %>-emoji-name-input" />
+        <input id="emojiFileName" type="text" value="" placeholder="keine Datei gewählt" readonly data-testid="<%= composerScope %>-emoji-file-name" />
+        <select id="emojiVisibilityInput" data-testid="<%= composerScope %>-emoji-visibility-input">
+          <option value="private">Private</option>
+          <option value="public">Public</option>
+        </select>
+        <div class="composer-tools">
+          <button type="button" class="chip" id="emojiChooseFileBtn" aria-label="Choose emoji file" data-testid="<%= composerScope %>-emoji-choose-file">Datei wählen</button>
+          <button type="button" class="chip" id="emojiUploadCancelBtn" data-testid="<%= composerScope %>-emoji-cancel-upload">Cancel</button>
+          <button type="button" class="chip" id="emojiUploadBtn" data-testid="<%= composerScope %>-emoji-upload-button" disabled>Upload</button>
+        </div>
+      </div>
+      <div class="emoji-preview-box" id="emojiPreviewBox" data-testid="<%= composerScope %>-emoji-preview-box" hidden>
+        <img id="emojiPreviewImg" alt="Emoji preview" data-testid="<%= composerScope %>-emoji-preview-image" />
+      </div>
+      <p class="sub" id="emojiUploadStatus" data-testid="<%= composerScope %>-emoji-upload-status" hidden></p>
+      <p class="sub" id="emojiUploadError" data-testid="<%= composerScope %>-emoji-upload-error" hidden></p>
+    </section>
+    <div id="emojiItemMenu" class="emoji-item-menu gradient-card" hidden></div>
+  </div>
+
+  <div id="gifModal" class="gif-modal" data-testid="<%= composerScope %>-gif-modal" hidden>
+    <div class="gif-modal-backdrop" data-close-gif="true"></div>
+    <section class="gif-modal-card gradient-card" role="dialog" aria-modal="true" aria-label="GIF auswählen">
+      <div class="gif-modal-head">
+        <strong>GIF auswählen</strong>
+        <button type="button" class="chip" data-close-gif="true" data-testid="<%= composerScope %>-gif-close">Schließen</button>
+      </div>
+      <div class="gif-modal-tools" id="gifTabs" data-testid="<%= composerScope %>-gif-tabs">
+        <button type="button" class="chip" data-gif-tab="favorites" data-testid="<%= composerScope %>-gif-tab-favorites">Favorites</button>
+        <button type="button" class="chip" data-gif-tab="recent" data-testid="<%= composerScope %>-gif-tab-recent">Recent</button>
+        <button type="button" class="chip" data-gif-tab="trending" data-testid="<%= composerScope %>-gif-tab-trending">Trending</button>
+        <button type="button" class="chip active-chip" data-gif-tab="global" data-testid="<%= composerScope %>-gif-tab-global">Global</button>
+        <button type="button" class="chip" data-gif-tab="mine" data-testid="<%= composerScope %>-gif-tab-mine">My Uploads</button>
+        <button type="button" class="chip" data-gif-tab="add" data-testid="<%= composerScope %>-gif-tab-add">Add GIF</button>
+      </div>
+      <section id="gifBrowseView" data-testid="<%= composerScope %>-gif-browse-view">
+        <input id="gifSearchInput" type="search" placeholder="GIF suchen..." autocomplete="off" data-testid="<%= composerScope %>-gif-search-input" />
+        <p class="sub" id="gifSearchStatus" data-testid="<%= composerScope %>-gif-search-status" hidden></p>
+        <div id="gifSectionScroll" class="gif-section-scroll" data-testid="<%= composerScope %>-gif-section-scroll">
+          <div id="gifResults" class="gif-section-list" data-testid="<%= composerScope %>-gif-results"></div>
+        </div>
+      </section>
+      <section id="gifAddView" class="gif-upload-panel" data-testid="<%= composerScope %>-gif-add-view" hidden>
+        <input id="gifNameInput" type="text" placeholder="gif_name (z.B. cat_spin)" maxlength="32" data-testid="<%= composerScope %>-gif-name-input" />
+        <div class="tag-input-wrap" id="gifTagInputWrap">
+          <div id="gifTagChips" class="tag-chips" data-testid="<%= composerScope %>-gif-tag-chips"></div>
+          <input id="gifTagInput" type="text" placeholder="tags eingeben, Enter für Tag" maxlength="24" data-testid="<%= composerScope %>-gif-tag-input" />
+        </div>
+        <input id="gifUploadFileInput" type="file" accept="image/gif,image/webp,video/mp4" hidden data-testid="<%= composerScope %>-gif-file-input" />
+        <input id="gifFileName" type="text" value="" placeholder="keine Datei gewählt" readonly data-testid="<%= composerScope %>-gif-file-name" />
+        <div class="gif-preview-box" id="gifPreviewBox" data-testid="<%= composerScope %>-gif-preview-box" hidden>
+          <img id="gifPreviewImg" alt="GIF preview" data-testid="<%= composerScope %>-gif-preview-image" />
+          <video id="gifPreviewVideo" muted loop autoplay playsinline data-testid="<%= composerScope %>-gif-preview-video" hidden></video>
+        </div>
+        <div class="composer-tools">
+          <button type="button" class="chip" id="gifChooseFileBtn" aria-label="Choose GIF file" data-testid="<%= composerScope %>-gif-choose-file">Datei wählen</button>
+          <button type="button" class="chip" id="gifUploadCancelBtn" data-testid="<%= composerScope %>-gif-cancel-upload">Cancel</button>
+          <button type="button" class="chip" id="gifUploadBtn" data-testid="<%= composerScope %>-gif-upload-button" disabled>Upload</button>
+        </div>
+        <p class="sub" id="gifUploadStatus" data-testid="<%= composerScope %>-gif-upload-status" hidden></p>
+        <p class="sub" id="gifUploadError" data-testid="<%= composerScope %>-gif-upload-error" hidden></p>
+      </section>
+    </section>
+  </div>
+
+  <div class="edge-state" id="networkState" data-testid="<%= composerScope %>-network-state" hidden>Reconnecting...</div>
+  <% if (composerHint) { %>
+    <p class="sub composer-hint"><%= composerHint %></p>
+  <% } %>
+</form>

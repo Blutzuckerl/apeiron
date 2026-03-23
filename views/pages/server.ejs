@@ -1,0 +1,551 @@
+<%- include('../partials/head', { title }) %>
+<div class="app-bg"></div>
+<main class="app-shell server-shell">
+  <%- include('../partials/flash') %>
+
+  <section class="workspace-grid">
+    <%- include('../partials/server-rail', { servers, selectedServer }) %>
+
+    <aside class="nav-rail gradient-card with-userbar" data-testid="server-nav-rail">
+      <div class="nav-rail-scroll">
+      <header class="server-sidebar-head">
+        <button class="server-title-btn" id="serverMenuTrigger" data-testid="server-menu-trigger" type="button" aria-label="Open server menu" aria-haspopup="menu" aria-expanded="false" aria-controls="serverMenu">
+          <span><%= selectedServer.name %></span>
+          <span>▾</span>
+        </button>
+        <p class="sub"><%= selectedServer.description %></p>
+        <div class="server-menu gradient-card" id="serverMenu" data-testid="server-menu" role="menu" aria-labelledby="serverMenuTrigger" hidden>
+          <% if (canInvitePeople) { %>
+            <button type="button" class="chip" data-server-menu-action="invite-people">Invite People</button>
+          <% } else { %>
+            <button type="button" class="chip is-disabled" disabled title="Keine Berechtigung">Invite People</button>
+          <% } %>
+          <button type="button" class="chip" data-server-menu-action="notification-settings">Notification Settings</button>
+          <button type="button" class="chip" data-server-menu-action="privacy-settings">Privacy Settings</button>
+          <% if (canManageChannels) { %>
+            <button type="button" class="chip" data-server-menu-action="server-settings" data-server-nav="/app/servers/<%= selectedServer.id %>/settings">Server Settings</button>
+            <button type="button" class="chip" data-server-menu-action="create-channel">Create Channel</button>
+            <button type="button" class="chip" data-server-menu-action="create-category">Create Category</button>
+          <% } else { %>
+            <button type="button" class="chip is-disabled" disabled title="Keine Berechtigung">Server Settings</button>
+            <button type="button" class="chip is-disabled" disabled title="Keine Berechtigung">Create Channel</button>
+            <button type="button" class="chip is-disabled" disabled title="Keine Berechtigung">Create Category</button>
+          <% } %>
+          <div class="menu-divider"></div>
+          <button type="button" class="chip" data-server-menu-action="mark-read">Mark Server as Read</button>
+          <button type="button" class="chip danger-link" data-server-menu-action="leave-server">Leave Server</button>
+        </div>
+      </header>
+
+      <div class="list-head">Channels</div>
+      <% const categorizedChannelIds = new Set(); %>
+      <% categories.forEach(function(category) { %>
+        <% const groupedChannels = channels.filter((channel) => Number(channel.category_id || 0) === Number(category.id)); %>
+        <% if (groupedChannels.length) { %>
+          <div class="list-head server-category-head"><%= category.name %></div>
+          <% groupedChannels.forEach(function(channel) { %>
+            <% categorizedChannelIds.add(channel.id); %>
+            <%- include('../partials/server-channel-row', { channel, selectedServer, selectedChannel, currentUser, voiceBootstrap, canInvitePeople, canManageChannels }) %>
+          <% }) %>
+        <% } %>
+      <% }) %>
+
+      <% const uncategorizedChannels = channels.filter((channel) => !categorizedChannelIds.has(channel.id)); %>
+      <% if (uncategorizedChannels.length) { %>
+        <div class="list-head server-category-head">General</div>
+        <% uncategorizedChannels.forEach(function(channel) { %>
+          <%- include('../partials/server-channel-row', { channel, selectedServer, selectedChannel, currentUser, voiceBootstrap, canInvitePeople, canManageChannels }) %>
+        <% }) %>
+      <% } %>
+      </div>
+      <%- include('../partials/sidebar-userbar') %>
+    </aside>
+
+    <section class="chat-main gradient-card">
+      <input type="hidden" id="serverCurrentDisplayName" value="<%= currentUser.display_name || currentUser.username %>" />
+      <input type="hidden" id="serverCurrentAvatarUrl" value="<%= currentUser.avatar_url || '' %>" />
+      <input type="hidden" id="serverContextServerId" value="<%= selectedServer.id %>" />
+      <input type="hidden" id="serverContextIsOwner" value="<%= isServerOwner ? '1' : '0' %>" />
+      <input type="hidden" id="serverContextCanModerate" value="<%= canModerateMessages ? '1' : '0' %>" />
+      <section class="server-pane" id="serverTextView" data-testid="server-text-view" <%= selectedChannel && selectedChannel.type === 'voice' ? 'hidden' : '' %>>
+        <div class="chat-top-stack">
+          <header class="chat-head">
+            <div class="chat-head-main">
+              <h2><%= selectedTextChannel ? ('# ' + selectedTextChannel.name) : 'Kein Channel' %></h2>
+              <% if (selectedTextChannel && selectedTextChannel.topic) { %>
+                <p class="chat-head-topic"><%= selectedTextChannel.topic %></p>
+              <% } %>
+            </div>
+            <div class="head-badges">
+              <button type="button" class="badge" id="membersToggleBtn" data-testid="members-toggle-button">Members</button>
+            </div>
+          </header>
+        </div>
+        <div class="timeline-wrap" data-testid="server-timeline-wrap">
+          <div class="timeline" id="serverTimeline" data-testid="server-timeline">
+            <% if (!selectedTextChannel) { %>
+              <div class="cat-card empty">🐈 Kein Text-Channel verfügbar.</div>
+            <% } %>
+            <% channelMessages.forEach(function(message) { %>
+              <% const avatarSource = String(message.author_avatar_url || '').trim(); %>
+              <% const fallbackAvatar = String(message.author_display_name || message.author_username || '?').trim().slice(0, 2).toUpperCase() || '?'; %>
+              <article
+                id="msg-<%= message.id %>"
+                class="msg <%= message.author_id === currentUser.id ? 'own' : '' %>"
+                data-testid="server-message"
+                data-message-id="<%= message.id %>"
+                data-author-id="<%= message.author_id %>"
+                data-is-own="<%= message.author_id === currentUser.id ? '1' : '0' %>"
+                data-context-type="server"
+                data-context-id="<%= selectedTextChannel ? selectedTextChannel.id : '' %>"
+                data-can-delete-any="<%= canModerateMessages ? '1' : '0' %>"
+                data-has-text="<%= String(message.content || '').trim() ? '1' : '0' %>"
+                data-has-attachments="<%= (message.attachments && message.attachments.length) || (message.gifs && message.gifs.length) ? '1' : '0' %>"
+                data-is-system-message="<%= message.kind === 'system' ? '1' : '0' %>"
+                data-message-text="<%- encodeURIComponent(String(message.content || '')) %>"
+                data-emoji-entities="<%= encodeURIComponent(JSON.stringify(message.emoji_entities || [])) %>"
+              >
+                <div class="avatar msg-avatar">
+                  <% if (avatarSource) { %>
+                    <img src="<%= avatarSource %>" alt="<%= message.author_display_name %>" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
+                    <span class="avatar-fallback" hidden><%= fallbackAvatar %></span>
+                  <% } else { %>
+                    <span class="avatar-fallback"><%= fallbackAvatar %></span>
+                  <% } %>
+                </div>
+                <div class="bubble">
+                  <div class="meta"><strong><%= message.author_display_name %></strong> <span><%= message.created_at %><% if (message.edited_at) { %> <span class="edited-mark">(edited)</span><% } %></span></div>
+                  <% if (message.reply_to_message) { %>
+                    <button type="button" class="msg-reply-preview" data-jump-to-message="<%= message.reply_to_message.id %>">
+                      <strong><%= message.reply_to_message.author_display_name %></strong>
+                      <span><%= message.reply_to_message.missing ? 'Deleted message' : (String(message.reply_to_message.content || '').trim() || 'Attachment') %></span>
+                    </button>
+                  <% } %>
+                  <% if (String(message.content || '').trim()) { %>
+                    <p class="msg-text"><%= message.content %></p>
+                  <% } %>
+                  <% if (message.attachments && message.attachments.length) { %>
+                    <div class="msg-attachments">
+                      <% message.attachments.forEach(function(att) { %>
+                        <% if ((att.kind === 'image' || att.kind === 'gif') && String(att.url || '').trim()) { %>
+                          <a class="msg-attachment media" href="<%= att.url %>" target="_blank" rel="noopener noreferrer">
+                            <img src="<%= att.url %>" alt="<%= att.filename || 'attachment' %>" loading="lazy" />
+                          </a>
+                        <% } else if (att.kind === 'video' && String(att.url || '').trim()) { %>
+                          <video class="msg-video" controls preload="metadata">
+                            <source src="<%= att.url %>" type="<%= att.mime_type || 'video/mp4' %>" />
+                          </video>
+                        <% } else if (String(att.url || '').trim()) { %>
+                          <a class="msg-attachment file" href="<%= att.url %>" target="_blank" rel="noopener noreferrer">
+                            <strong><%= att.filename || 'Datei' %></strong>
+                            <span><%= att.file_size ? Math.ceil(att.file_size / 1024) + ' KB' : 'Datei' %></span>
+                          </a>
+                        <% } %>
+                      <% }) %>
+                    </div>
+                  <% } %>
+                  <% if (message.gifs && message.gifs.length) { %>
+                    <div class="msg-attachments">
+                      <% message.gifs.forEach(function(gif) { %>
+                        <% if (gif.deleted || !String(gif.url || '').trim()) { %>
+                          <div class="msg-attachment media deleted-gif-card" data-message-gif-id="<%= gif.id || 0 %>" data-gif-deleted="1">
+                            <div class="deleted-gif-placeholder">
+                              <strong>GIF deleted</strong>
+                              <span><%= gif.name || 'Removed from library' %></span>
+                            </div>
+                          </div>
+                        <% } else { %>
+                          <a
+                            class="msg-attachment media"
+                            data-message-gif-id="<%= gif.id || 0 %>"
+                            data-message-gif-name="<%= gif.name || 'gif' %>"
+                            data-message-gif-tags="<%= gif.tags || '' %>"
+                            data-message-gif-source="<%= gif.source || gif.sourceLabel || 'Message' %>"
+                            href="<%= gif.url %>"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <img src="<%= gif.url %>" alt="<%= gif.name || 'gif' %>" loading="lazy" />
+                          </a>
+                        <% } %>
+                      <% }) %>
+                    </div>
+                  <% } %>
+                  <% if (message.reactions && message.reactions.length) { %>
+                    <div class="msg-reaction-row">
+                      <% message.reactions.forEach(function(reaction) { %>
+                        <button type="button" class="msg-reaction-chip" data-reaction-emoji="<%= reaction.emoji %>" data-reaction-count="<%= reaction.count %>">
+                          <span><%= reaction.emoji %></span>
+                          <small><%= reaction.count %></small>
+                        </button>
+                      <% }) %>
+                    </div>
+                  <% } %>
+                </div>
+              </article>
+            <% }) %>
+          </div>
+        </div>
+
+        <%- include('../partials/chat-composer', {
+          composerAction: '/app/servers/' + selectedServer.id + '/message',
+          composerFormId: 'serverComposerForm',
+          composerContextFieldName: 'channelId',
+          composerContextFieldValue: selectedTextChannel ? selectedTextChannel.id : '',
+          composerPlaceholder: selectedTextChannel ? ('Schreibe in #' + selectedTextChannel.name + '... Enter sendet, Shift+Enter neue Zeile') : 'Kein Text-Channel verfügbar.',
+          composerDisabled: !selectedTextChannel || !channelCanPost,
+          composerCanUploadFiles: Boolean(selectedTextChannel && channelCanPost),
+          composerSubmitLabel: 'Senden',
+          composerHint: selectedTextChannel && channelCanPost ? ('#' + selectedTextChannel.name) : 'You do not have permission to post in this channel.',
+          userEmojis
+        }) %>
+      </section>
+
+      <section class="server-pane server-voice-pane" id="serverVoiceView" data-testid="server-voice-view" <%= selectedChannel && selectedChannel.type === 'voice' ? '' : 'hidden' %>>
+        <% if (selectedChannel && selectedChannel.type === 'voice') { %>
+          <header class="voice-head">
+            <div class="voice-head-main">
+              <h2>🔊 <%= selectedChannel.name %></h2>
+              <p><%= selectedChannel.topic || 'Voice-Channel wird initialisiert…' %></p>
+            </div>
+            <div class="voice-state-pill" data-testid="voice-state-pill">
+              <span class="voice-dot" aria-hidden="true"></span>
+              <span>Loading…</span>
+            </div>
+          </header>
+          <div class="voice-hero-card">
+            <div class="voice-hero-copy">
+              <p class="list-head">Voice Channel</p>
+              <h3>🔊 <%= selectedChannel.name %></h3>
+              <p>Join voice to start talking.</p>
+            </div>
+          </div>
+        <% } %>
+      </section>
+    </section>
+
+    <aside class="info-rail gradient-card" id="serverMembersRail" data-testid="members-rail">
+      <h3 data-testid="members-header">Members — <%= memberCount %></h3>
+      <div class="list-head">Online — <%= onlineMembers.length %></div>
+      <% if (!onlineMembers.length) { %>
+        <p class="sub">Niemand online</p>
+      <% } %>
+      <% onlineMembers.forEach(function(member) { %>
+        <% const memberSubline = member.custom_status_line || ('@' + member.username); %>
+        <div class="dm-row slim server-member-row" data-testid="member-row" data-member-menu-for="member-<%= member.id %>" tabindex="0" role="button" aria-haspopup="menu" data-presence-user-id="<%= member.id %>" data-presence-status="<%= member.presence %>" data-presence-last-seen="<%= member.last_seen || '' %>">
+          <span class="avatar member-avatar" data-testid="member-avatar">
+            <% if (member.avatar_url) { %>
+              <img src="<%= member.avatar_url %>" alt="<%= member.display_name %>" loading="lazy" data-fallback-src="<%= member.avatar_fallback_url || '' %>" onerror="if(!this.dataset.failed&&this.dataset.fallbackSrc){this.dataset.failed='1';this.src=this.dataset.fallbackSrc;return;}this.hidden=true;this.nextElementSibling.hidden=false;" />
+              <span class="avatar-fallback" hidden><%= member.display_name.charAt(0) %></span>
+            <% } else { %>
+              <span class="avatar-fallback"><%= member.display_name.charAt(0) %></span>
+            <% } %>
+            <span class="status-dot <%= member.presence %>" data-presence-dot></span>
+          </span>
+          <div class="dm-row-copy">
+            <strong><%= member.display_name %></strong>
+            <p><%= memberSubline %></p>
+          </div>
+          <div class="member-context gradient-card" id="member-<%= member.id %>" data-testid="member-context-menu" hidden>
+            <form method="post" action="/app/home/new-dm">
+              <input type="hidden" name="username" value="@<%= member.username %>" />
+              <button type="submit" class="chip">Message</button>
+            </form>
+            <button type="button" class="chip" data-open-full-profile="<%= member.id %>">View Profile</button>
+            <button type="button" class="chip" data-mention="@<%= member.username %>">Mention</button>
+            <form method="post" action="/app/friends/block">
+              <input type="hidden" name="handle" value="@<%= member.username %>" />
+              <button type="submit" class="chip danger">Block</button>
+            </form>
+            <button type="button" class="chip is-disabled" disabled title="Not implemented">Report</button>
+          </div>
+        </div>
+      <% }) %>
+
+      <div class="list-head">Offline — <%= offlineMembers.length %></div>
+      <% if (!offlineMembers.length) { %>
+        <p class="sub">Niemand offline</p>
+      <% } %>
+      <% offlineMembers.forEach(function(member) { %>
+        <% const memberSubline = member.custom_status_line || ('@' + member.username); %>
+        <div class="dm-row slim server-member-row" data-testid="member-row" data-member-menu-for="member-<%= member.id %>" tabindex="0" role="button" aria-haspopup="menu" data-presence-user-id="<%= member.id %>" data-presence-status="<%= member.presence %>" data-presence-last-seen="<%= member.last_seen || '' %>">
+          <span class="avatar member-avatar" data-testid="member-avatar">
+            <% if (member.avatar_url) { %>
+              <img src="<%= member.avatar_url %>" alt="<%= member.display_name %>" loading="lazy" data-fallback-src="<%= member.avatar_fallback_url || '' %>" onerror="if(!this.dataset.failed&&this.dataset.fallbackSrc){this.dataset.failed='1';this.src=this.dataset.fallbackSrc;return;}this.hidden=true;this.nextElementSibling.hidden=false;" />
+              <span class="avatar-fallback" hidden><%= member.display_name.charAt(0) %></span>
+            <% } else { %>
+              <span class="avatar-fallback"><%= member.display_name.charAt(0) %></span>
+            <% } %>
+            <span class="status-dot <%= member.presence %>" data-presence-dot></span>
+          </span>
+          <div class="dm-row-copy">
+            <strong><%= member.display_name %></strong>
+            <p><%= memberSubline %></p>
+          </div>
+          <div class="member-context gradient-card" id="member-<%= member.id %>" data-testid="member-context-menu" hidden>
+            <form method="post" action="/app/home/new-dm">
+              <input type="hidden" name="username" value="@<%= member.username %>" />
+              <button type="submit" class="chip">Message</button>
+            </form>
+            <button type="button" class="chip" data-open-full-profile="<%= member.id %>">View Profile</button>
+            <button type="button" class="chip" data-mention="@<%= member.username %>">Mention</button>
+            <form method="post" action="/app/friends/block">
+              <input type="hidden" name="handle" value="@<%= member.username %>" />
+              <button type="submit" class="chip danger">Block</button>
+            </form>
+            <button type="button" class="chip is-disabled" disabled title="Not implemented">Report</button>
+          </div>
+        </div>
+      <% }) %>
+    </aside>
+  </section>
+</main>
+
+<div class="server-modal" data-server-modal="invite-people" hidden>
+  <div class="server-modal-backdrop" data-close-server-modal="invite-people"></div>
+  <section class="server-modal-card gradient-card" role="dialog" aria-modal="true" aria-labelledby="invitePeopleTitle">
+    <header class="server-modal-head">
+      <h3 id="invitePeopleTitle">Invite People</h3>
+      <button type="button" class="chip" data-close-server-modal="invite-people">Close</button>
+    </header>
+    <% if (canInvitePeople) { %>
+      <form class="server-modal-form" id="invitePeopleForm" data-async-submit="true">
+        <div class="server-modal-grid">
+          <label>
+            <span>Expires</span>
+            <select name="expiresOption">
+              <option value="30m">30 Minutes</option>
+              <option value="1d" selected>1 Day</option>
+              <option value="never">Never</option>
+            </select>
+          </label>
+          <label>
+            <span>Max Uses</span>
+            <select name="maxUses">
+              <option value="0" selected>Unlimited</option>
+              <option value="1">1</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+            </select>
+          </label>
+        </div>
+        <label class="inline">
+          <input type="checkbox" name="requireVerification" />
+          <span>Require verification</span>
+        </label>
+        <div class="server-modal-actions">
+          <button type="submit" class="btn primary" id="invitePeopleSubmitBtn">Create Invite Link</button>
+        </div>
+      </form>
+      <p class="sub" id="invitePeopleStatus" hidden></p>
+      <label>
+        <span>Latest Invite Link</span>
+        <input id="invitePeopleLink" readonly placeholder="No link generated yet" />
+      </label>
+      <div class="server-modal-actions">
+        <button type="button" class="chip" id="invitePeopleCopyBtn" disabled>Copy</button>
+      </div>
+      <div class="list-head">Pending Invites</div>
+      <div class="server-inline-list" id="invitePendingList">
+        <% if (!activeInvites.length) { %>
+          <p class="sub">No pending invites.</p>
+        <% } %>
+        <% activeInvites.forEach(function(invite) { %>
+          <div class="server-inline-row" data-invite-token="<%= invite.token %>">
+            <code>/app/invite/<%= invite.token %></code>
+            <span class="sub"><%= invite.expires_at ? ('expires ' + invite.expires_at) : 'no expiry' %> • uses <%= invite.use_count %>/<%= invite.max_uses || '∞' %></span>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <p class="sub">Keine Berechtigung zum Erstellen von Einladungen.</p>
+    <% } %>
+  </section>
+</div>
+
+<div class="server-modal" data-server-modal="notification-settings" hidden>
+  <div class="server-modal-backdrop" data-close-server-modal="notification-settings"></div>
+  <section class="server-modal-card gradient-card" role="dialog" aria-modal="true" aria-labelledby="notificationSettingsTitle">
+    <header class="server-modal-head">
+      <h3 id="notificationSettingsTitle">Notification Settings</h3>
+      <button type="button" class="chip" data-close-server-modal="notification-settings">Close</button>
+    </header>
+    <form class="server-modal-form" id="notificationSettingsForm" data-async-submit="true">
+      <div class="server-modal-grid">
+        <label>
+          <span>Mute Server</span>
+          <select name="muteDuration">
+            <% const mutePreset = notificationSettings && notificationSettings.muted_until ? 'always' : 'off'; %>
+            <option value="off" <%= mutePreset === 'off' ? 'selected' : '' %>>Off</option>
+            <option value="15m">15 Minutes</option>
+            <option value="1h">1 Hour</option>
+            <option value="8h">8 Hours</option>
+            <option value="24h">24 Hours</option>
+            <option value="always" <%= mutePreset === 'always' ? 'selected' : '' %>>Always</option>
+          </select>
+        </label>
+        <label>
+          <span>Notification Level</span>
+          <select name="notificationLevel">
+            <option value="all" <%= notificationSettings && notificationSettings.notification_level === 'all' ? 'selected' : '' %>>All</option>
+            <option value="mentions" <%= !notificationSettings || notificationSettings.notification_level === 'mentions' ? 'selected' : '' %>>Mentions</option>
+            <option value="nothing" <%= notificationSettings && notificationSettings.notification_level === 'nothing' ? 'selected' : '' %>>Nothing</option>
+          </select>
+        </label>
+      </div>
+      <label class="inline">
+        <input type="checkbox" name="suppressEveryone" <%= notificationSettings && notificationSettings.suppress_everyone ? 'checked' : '' %> />
+        <span>Suppress @everyone</span>
+      </label>
+      <label class="inline">
+        <input type="checkbox" name="suppressHere" <%= notificationSettings && notificationSettings.suppress_here ? 'checked' : '' %> />
+        <span>Suppress @here</span>
+      </label>
+      <div class="server-modal-actions">
+        <button type="submit" class="btn primary" id="notificationSettingsSubmitBtn">Save</button>
+      </div>
+      <p class="sub" id="notificationSettingsStatus" hidden></p>
+    </form>
+  </section>
+</div>
+
+<div class="server-modal" data-server-modal="privacy-settings" hidden>
+  <div class="server-modal-backdrop" data-close-server-modal="privacy-settings"></div>
+  <section class="server-modal-card gradient-card" role="dialog" aria-modal="true" aria-labelledby="privacySettingsTitle">
+    <header class="server-modal-head">
+      <h3 id="privacySettingsTitle">Privacy Settings</h3>
+      <button type="button" class="chip" data-close-server-modal="privacy-settings">Close</button>
+    </header>
+    <form class="server-modal-form" id="privacySettingsForm" data-async-submit="true">
+      <label>
+        <span>Who can DM me from this server?</span>
+        <select name="dmPermission">
+          <option value="everyone" <%= privacySettings && privacySettings.dm_permission === 'everyone' ? 'selected' : '' %>>Everyone</option>
+          <option value="friends" <%= !privacySettings || privacySettings.dm_permission === 'friends' ? 'selected' : '' %>>Friends</option>
+          <option value="nobody" <%= privacySettings && privacySettings.dm_permission === 'nobody' ? 'selected' : '' %>>Nobody</option>
+        </select>
+      </label>
+      <label>
+        <span>Explicit Content Filter</span>
+        <select name="explicitFilter">
+          <option value="off" <%= privacySettings && privacySettings.explicit_content_filter === 'off' ? 'selected' : '' %>>Off</option>
+          <option value="safe" <%= !privacySettings || privacySettings.explicit_content_filter === 'safe' ? 'selected' : '' %>>Safe</option>
+          <option value="strict" <%= privacySettings && privacySettings.explicit_content_filter === 'strict' ? 'selected' : '' %>>Strict</option>
+        </select>
+      </label>
+      <div class="server-modal-actions">
+        <button type="submit" class="btn primary" id="privacySettingsSubmitBtn">Save</button>
+      </div>
+      <p class="sub" id="privacySettingsStatus" hidden></p>
+    </form>
+  </section>
+</div>
+
+<div class="server-modal" data-server-modal="create-channel" hidden>
+  <div class="server-modal-backdrop" data-close-server-modal="create-channel"></div>
+  <section class="server-modal-card gradient-card" role="dialog" aria-modal="true" aria-labelledby="createChannelTitle">
+    <header class="server-modal-head">
+      <h3 id="createChannelTitle">Create Channel</h3>
+      <button type="button" class="chip" data-close-server-modal="create-channel">Close</button>
+    </header>
+    <% if (canManageChannels) { %>
+      <form class="server-modal-form" id="createChannelForm" data-async-submit="true">
+        <div class="server-modal-grid">
+          <label>
+            <span>Channel Type</span>
+            <select name="type">
+              <option value="text" selected>Text</option>
+              <option value="voice">Voice</option>
+            </select>
+          </label>
+          <label>
+            <span>Category</span>
+            <select name="categoryId" id="createChannelCategoryInput">
+              <option value="">No Category</option>
+              <% categories.forEach(function(category) { %>
+                <option value="<%= category.id %>"><%= category.name %></option>
+              <% }) %>
+            </select>
+          </label>
+        </div>
+        <label>
+          <span>Name</span>
+          <input type="text" name="name" maxlength="40" required placeholder="spacetime" />
+        </label>
+        <label>
+          <span>Topic / Description</span>
+          <input type="text" name="topic" maxlength="140" placeholder="Relativity notes and updates" />
+        </label>
+        <div class="server-modal-actions">
+          <button type="submit" class="btn primary" id="createChannelSubmitBtn">Create Channel</button>
+        </div>
+        <p class="sub" id="createChannelStatus" hidden></p>
+      </form>
+    <% } else { %>
+      <p class="sub">Keine Berechtigung zum Erstellen von Channels.</p>
+    <% } %>
+  </section>
+</div>
+
+<div class="server-modal" data-server-modal="create-category" hidden>
+  <div class="server-modal-backdrop" data-close-server-modal="create-category"></div>
+  <section class="server-modal-card gradient-card" role="dialog" aria-modal="true" aria-labelledby="createCategoryTitle">
+    <header class="server-modal-head">
+      <h3 id="createCategoryTitle">Create Category</h3>
+      <button type="button" class="chip" data-close-server-modal="create-category">Close</button>
+    </header>
+    <% if (canManageChannels) { %>
+      <form class="server-modal-form" id="createCategoryForm" data-async-submit="true">
+        <label>
+          <span>Category Name</span>
+          <input type="text" name="name" maxlength="60" required placeholder="Research" />
+        </label>
+        <div class="server-modal-actions">
+          <button type="submit" class="btn primary" id="createCategorySubmitBtn">Create Category</button>
+        </div>
+        <p class="sub" id="createCategoryStatus" hidden></p>
+      </form>
+    <% } else { %>
+      <p class="sub">Keine Berechtigung zum Erstellen von Kategorien.</p>
+    <% } %>
+  </section>
+</div>
+
+<div class="server-modal" data-server-modal="leave-server" hidden>
+  <div class="server-modal-backdrop" data-close-server-modal="leave-server"></div>
+  <section class="server-modal-card gradient-card" role="dialog" aria-modal="true" aria-labelledby="leaveServerTitle">
+    <header class="server-modal-head">
+      <h3 id="leaveServerTitle">Leave Server</h3>
+      <button type="button" class="chip" data-close-server-modal="leave-server">Close</button>
+    </header>
+    <form class="server-modal-form" id="leaveServerForm" data-async-submit="true">
+      <% if (isServerOwner) { %>
+        <p class="sub">Als Owner musst du vor dem Verlassen die Ownership übertragen.</p>
+        <label>
+          <span>Transfer ownership to</span>
+          <select name="transferOwnerId" <%= ownerTransferCandidates.length ? '' : 'disabled' %>>
+            <option value="">Select member</option>
+            <% ownerTransferCandidates.forEach(function(member) { %>
+              <option value="<%= member.id %>"><%= member.display_name %> (@<%= member.username %>)</option>
+            <% }) %>
+          </select>
+        </label>
+        <% if (!ownerTransferCandidates.length) { %>
+          <p class="sub">Kein anderes Mitglied vorhanden. Transfer aktuell nicht möglich.</p>
+        <% } %>
+      <% } else { %>
+        <p class="sub">Du verlässt den Server „<%= selectedServer.name %>“. Dieser Schritt kann nicht rückgängig gemacht werden.</p>
+      <% } %>
+      <div class="server-modal-actions">
+        <button type="submit" class="btn danger" id="leaveServerSubmitBtn">Leave Server</button>
+      </div>
+      <p class="sub" id="leaveServerStatus" hidden></p>
+    </form>
+  </section>
+</div>
+
+<script id="userEmojiLibraryData" type="application/json"><%- JSON.stringify(userEmojis || []) %></script>
+<script id="emojiPreferenceData" type="application/json"><%- JSON.stringify(emojiPickerState || { favorites: [], recents: [] }) %></script>
+<script id="serverVoiceBootstrap" type="application/json"><%- JSON.stringify(voiceBootstrap || {}) %></script>
+<div class="server-toast-stack" id="serverToastStack" aria-live="polite" aria-atomic="false"></div>
+<%- include('../partials/tail') %>

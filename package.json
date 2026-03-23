@@ -1,0 +1,40 @@
+{
+  "name": "apeiron-platform",
+  "version": "1.0.0",
+  "description": "Apeiron - Discord-like platform with SQL, auth flow, sessions, JWT, and colorful cat-themed UI",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:migrate": "node src/db/migrate.js",
+    "db:seed": "node src/db/seed.js",
+    "db:continue-chats": "node src/db/continueChats.js",
+    "db:reset": "node src/db/reset.js",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:lan": "PLAYWRIGHT_BASE_URL=http://127.0.0.1:3200 PLAYWRIGHT_SERVER_HOST=0.0.0.0 PLAYWRIGHT_SERVER_PORT=3200 HTTP_PORT=3200 PORT=3200 HTTPS_ENABLED=1 HTTPS_PORT=3543 TLS_MODE=self-signed TURN_URLS=turn:127.0.0.1:3478?transport=udp TURN_USER=apeiron TURN_PASS=apeiron-dev-secret PLAYWRIGHT_IGNORE_HTTPS_ERRORS=1 playwright test e2e/lan-access.spec.js",
+    "test:e2e:mobile-lan": "PLAYWRIGHT_BASE_URL=http://127.0.0.1:3200 PLAYWRIGHT_SERVER_HOST=0.0.0.0 PLAYWRIGHT_SERVER_PORT=3200 HTTP_PORT=3200 PORT=3200 HTTPS_ENABLED=1 HTTPS_PORT=3543 TLS_MODE=self-signed TURN_URLS=turn:127.0.0.1:3478?transport=udp TURN_USER=apeiron TURN_PASS=apeiron-dev-secret PLAYWRIGHT_IGNORE_HTTPS_ERRORS=1 playwright test e2e/lan-qr-scan.spec.js e2e/mobile-android.spec.js e2e/mobile-ios-webkit.spec.js e2e/desktop-win-chromium.spec.js e2e/visual-profile-smoke.spec.js",
+    "test:e2e:mobile-lan:functional": "PLAYWRIGHT_BASE_URL=http://127.0.0.1:3200 PLAYWRIGHT_SERVER_HOST=0.0.0.0 PLAYWRIGHT_SERVER_PORT=3200 HTTP_PORT=3200 PORT=3200 HTTPS_ENABLED=1 HTTPS_PORT=3543 TLS_MODE=self-signed TURN_URLS=turn:127.0.0.1:3478?transport=udp TURN_USER=apeiron TURN_PASS=apeiron-dev-secret PLAYWRIGHT_IGNORE_HTTPS_ERRORS=1 PLAYWRIGHT_MOBILE_SKIP_SNAPSHOT=1 playwright test e2e/lan-qr-scan.spec.js e2e/mobile-android.spec.js e2e/mobile-ios-webkit.spec.js --reporter=line",
+    "test:e2e:mobile-lan:headed": "npm run test:e2e:mobile-lan -- --headed",
+    "diagnose:lan:https": "node scripts/network/https-probe.js",
+    "test:e2e:tls-trusted": "PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_IGNORE_HTTPS_ERRORS=0 playwright test e2e/tls-trusted-gate.spec.js",
+    "test:e2e:sokrates": "playwright test e2e/sokrates.spec.js --reporter=line",
+    "test:e2e:sokrates:invalid-openai": "SOKRATES_REAL_INVALID_OPENAI=1 OPENAI_API_KEY=invalid OLLAMA_BASE_URL=http://127.0.0.1:11434 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3300 PLAYWRIGHT_SERVER_HOST=127.0.0.1 PLAYWRIGHT_SERVER_PORT=3300 HTTP_PORT=3300 PORT=3300 HTTPS_ENABLED=0 VOICE_REQUIRE_TURN=0 playwright test e2e/sokrates.spec.js --grep \"real provider run\" --reporter=line"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.0",
+    "jsqr": "^1.4.0",
+    "pngjs": "^7.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.7.0",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "jsonwebtoken": "^9.0.2",
+    "nanoid": "^3.3.11",
+    "qrcode": "^1.5.4",
+    "ws": "^8.19.0"
+  }
+}

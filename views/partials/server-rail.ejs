@@ -1,0 +1,30 @@
+<aside class="server-rail gradient-card">
+  <div class="server-rail-top">
+    <a href="/app/home" class="server-pill <%= !selectedServer ? 'active' : '' %>" title="Direct Messages">
+      <img class="server-pill-logo" src="/public/ressources/Medium.png" alt="Apeiron Home" />
+    </a>
+    <a href="/app/friends?tab=all" class="server-pill" title="Friends" aria-label="Friends">
+      <svg class="server-pill-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M16.5 11.5a3.5 3.5 0 1 0-2.91-5.44 4 4 0 0 1 0 5.88 3.49 3.49 0 0 0 2.91-.44Z" />
+        <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8.5 1c-1.33 0-2.52.32-3.5.88A5.97 5.97 0 0 1 15 18v.5h6V18a5 5 0 0 0-4.5-5Zm-8.5 1C4.69 14 2 16.69 2 20v.5h12V20c0-3.31-2.69-6-6-6Z" />
+      </svg>
+    </a>
+  </div>
+
+  <div class="server-rail-scroll">
+    <% servers.forEach(function(server) { %>
+      <a href="/app/servers/<%= server.id %>" class="server-pill <%= selectedServer && selectedServer.id === server.id ? 'active' : '' %>" title="<%= server.name %>">
+        <% if (server.icon_url) { %>
+          <img class="server-pill-image" src="<%= server.icon_url %>" alt="<%= server.name %>" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
+          <span class="server-pill-fallback" hidden><%= server.name.slice(0, 2).toUpperCase() %></span>
+        <% } else { %>
+          <span class="server-pill-fallback"><%= server.name.slice(0, 2).toUpperCase() %></span>
+        <% } %>
+      </a>
+    <% }) %>
+  </div>
+
+  <div class="server-rail-bottom">
+    <a href="/app/new-server" class="server-pill server-pill-new" title="New Server">+</a>
+  </div>
+</aside>

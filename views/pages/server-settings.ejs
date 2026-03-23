@@ -1,0 +1,429 @@
+<%- include('../partials/head', { title }) %>
+<div class="app-bg"></div>
+<main class="app-shell server-settings-shell" data-testid="server-settings-view">
+  <%- include('../partials/flash') %>
+
+  <section class="workspace-grid server-settings-grid">
+    <%- include('../partials/server-rail', { servers, selectedServer }) %>
+
+    <aside class="nav-rail gradient-card server-settings-nav" data-testid="server-settings-nav">
+      <header class="server-sidebar-head">
+        <h3 style="margin:0;">Server Settings</h3>
+        <p class="sub"><%= server.name %></p>
+        <a class="chip" href="/app/servers/<%= server.id %>">Back to Server</a>
+      </header>
+
+      <nav class="server-settings-nav-links" aria-label="Server settings sections">
+        <a class="chip <%= section === 'overview' ? 'active-chip' : '' %>" href="/app/servers/<%= server.id %>/settings?section=overview">Overview / Server Profile</a>
+        <a class="chip <%= section === 'channels' ? 'active-chip' : '' %>" href="/app/servers/<%= server.id %>/settings?section=channels">Channels</a>
+        <a class="chip <%= section === 'categories' ? 'active-chip' : '' %>" href="/app/servers/<%= server.id %>/settings?section=categories">Categories</a>
+        <a class="chip <%= section === 'members' ? 'active-chip' : '' %>" href="/app/servers/<%= server.id %>/settings?section=members">Members / Roles / Invites</a>
+        <a class="chip <%= section === 'moderation' ? 'active-chip' : '' %>" href="/app/servers/<%= server.id %>/settings?section=moderation">Moderation</a>
+        <a class="chip <%= section === 'apps' ? 'active-chip' : '' %>" href="/app/servers/<%= server.id %>/settings?section=apps">Apps / Integrations</a>
+      </nav>
+    </aside>
+
+    <section class="chat-main gradient-card server-settings-main" data-testid="server-settings-main">
+      <header class="chat-head server-settings-head">
+        <div class="chat-head-main">
+          <h2>Server Settings</h2>
+          <p class="chat-head-topic"><%= server.name %> - section: <%= section %></p>
+        </div>
+      </header>
+
+      <div class="server-settings-content" data-testid="server-settings-content">
+        <% if (section === 'overview') { %>
+          <% const accentValue = String(server.accent_color || '').trim(); %>
+          <% const traits = Array.isArray(server.traits) ? server.traits : []; %>
+          <% const iconValue = String(server.icon_url || '').trim(); %>
+          <% const bannerValue = String(server.banner_url || '').trim(); %>
+
+          <div class="server-settings-overview-grid">
+            <article class="server-settings-pane">
+              <h3 style="margin-top:0;">Server Profile</h3>
+              <form method="post" action="/app/servers/<%= server.id %>/settings/overview" class="settings-form" id="serverProfileSettingsForm" data-dirty-track="true" data-server-profile-form="true">
+                <input type="hidden" name="iconData" id="serverIconDataInput" value="" />
+                <input type="hidden" name="bannerData" id="serverBannerDataInput" value="" />
+                <input type="hidden" name="iconRemove" id="serverIconRemoveInput" value="0" />
+                <input type="hidden" name="bannerRemove" id="serverBannerRemoveInput" value="0" />
+
+                <label>
+                  <span>Server Name</span>
+                  <input id="serverSettingsNameInput" name="name" maxlength="80" value="<%= server.name %>" required />
+                </label>
+
+                <label>
+                  <span>Server Description (optional)</span>
+                  <textarea id="serverSettingsDescriptionInput" name="description" maxlength="240" rows="4"><%= server.description || '' %></textarea>
+                </label>
+
+                <div class="upload-control">
+                  <div class="list-head">Server Icon</div>
+                  <input id="serverIconFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+                  <div class="composer-tools">
+                    <button type="button" class="btn" id="serverChooseIconBtn">Choose Icon</button>
+                    <button type="button" class="chip" id="serverRemoveIconBtn">Remove Icon</button>
+                  </div>
+                  <p class="sub">PNG/JPG/WEBP/GIF, min 512x512 recommended, max 2MB.</p>
+                  <p class="inline-error" id="serverIconFileError" hidden></p>
+                </div>
+
+                <div class="upload-control">
+                  <div class="list-head">Server Banner</div>
+                  <input id="serverBannerFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+                  <div class="composer-tools">
+                    <button type="button" class="btn" id="serverChooseBannerBtn">Choose Banner</button>
+                    <button type="button" class="chip" id="serverRemoveBannerBtn">Remove Banner</button>
+                  </div>
+                  <p class="sub">PNG/JPG/WEBP/GIF, max 6MB.</p>
+                  <p class="inline-error" id="serverBannerFileError" hidden></p>
+                </div>
+
+                <label>
+                  <span>Accent / Theme Color</span>
+                  <input id="serverAccentColorInput" name="accentColor" type="color" value="<%= accentValue || '#45c8ff' %>" />
+                </label>
+                <div class="server-accent-presets" aria-label="Accent presets">
+                  <button type="button" class="chip server-accent-preset" data-accent-value="#45c8ff">Sky</button>
+                  <button type="button" class="chip server-accent-preset" data-accent-value="#58ff9c">Mint</button>
+                  <button type="button" class="chip server-accent-preset" data-accent-value="#ff5ea8">Rose</button>
+                  <button type="button" class="chip server-accent-preset" data-accent-value="#ffb347">Amber</button>
+                  <button type="button" class="chip server-accent-preset" data-accent-value="#6d8dff">Indigo</button>
+                </div>
+
+                <label>
+                  <span>Traits / Tags (up to 8, comma separated)</span>
+                  <input id="serverTraitsInput" name="traits" type="text" maxlength="220" value="<%= traits.join(', ') %>" placeholder="creative, esports, berlin" />
+                </label>
+
+                <button class="btn primary" type="submit">Save Server Profile</button>
+
+                <input type="hidden" id="serverPreviewSavedIcon" value="<%= iconValue %>" />
+                <input type="hidden" id="serverPreviewSavedBanner" value="<%= bannerValue %>" />
+                <input type="hidden" id="serverPreviewMemberCount" value="<%= Number(preview.memberCount || 0) %>" />
+                <input type="hidden" id="serverPreviewOnlineCount" value="<%= Number(preview.onlineCount || 0) %>" />
+              </form>
+            </article>
+
+            <aside class="server-settings-preview-wrap">
+              <div class="server-preview-card" id="serverPreviewCard" data-testid="server-settings-preview-card">
+                <div class="server-card__banner server-preview-banner" id="serverPreviewBanner" data-testid="server-settings-preview-banner">
+                  <% if (bannerValue) { %>
+                    <img id="serverPreviewBannerImg" src="<%= bannerValue %>" alt="Server banner" />
+                    <span id="serverPreviewBannerFallback" hidden></span>
+                  <% } else { %>
+                    <img id="serverPreviewBannerImg" alt="Server banner" hidden />
+                    <span id="serverPreviewBannerFallback"></span>
+                  <% } %>
+                </div>
+                <div class="server-card__meta server-preview-meta">
+                  <div class="server-preview-main">
+                    <div class="server-preview-icon" id="serverPreviewIcon">
+                      <% if (iconValue) { %>
+                        <img id="serverPreviewIconImg" src="<%= iconValue %>" alt="Server icon" />
+                        <span id="serverPreviewIconFallback" hidden><%= server.name.slice(0, 2).toUpperCase() %></span>
+                      <% } else { %>
+                        <img id="serverPreviewIconImg" alt="Server icon" hidden />
+                        <span id="serverPreviewIconFallback"><%= server.name.slice(0, 2).toUpperCase() %></span>
+                      <% } %>
+                    </div>
+                    <div class="server-preview-copy">
+                      <h4 id="serverPreviewName"><%= server.name %></h4>
+                      <p id="serverPreviewDescription"><%= server.description || 'No description set.' %></p>
+                      <p id="serverPreviewCounts"><%= Number(preview.memberCount || 0) %> members - <%= Number(preview.onlineCount || 0) %> online</p>
+                    </div>
+                  </div>
+                  <div class="server-preview-tags" id="serverPreviewTags">
+                    <% if (traits.length) { %>
+                      <% traits.forEach(function(tag) { %>
+                        <span class="server-tag-pill"><%= tag %></span>
+                      <% }) %>
+                    <% } else { %>
+                      <span class="sub">No traits yet.</span>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        <% } %>
+
+        <% if (section === 'channels') { %>
+          <article class="server-settings-pane">
+            <h3 style="margin-top:0;">Channels</h3>
+
+            <form method="post" action="/app/servers/<%= server.id %>/settings/channels/create" class="settings-form">
+              <label>
+                <span>Channel Type</span>
+                <select name="type">
+                  <option value="text" selected>text</option>
+                  <option value="voice">voice</option>
+                </select>
+              </label>
+              <label>
+                <span>Name</span>
+                <input name="name" maxlength="40" placeholder="announcements" required />
+              </label>
+              <label>
+                <span>Topic</span>
+                <input name="topic" maxlength="140" placeholder="What this channel is about" />
+              </label>
+              <label>
+                <span>Category</span>
+                <select name="categoryId">
+                  <option value="">No category</option>
+                  <% categories.forEach(function(category) { %>
+                    <option value="<%= category.id %>"><%= category.name %></option>
+                  <% }) %>
+                </select>
+              </label>
+              <button class="btn primary" type="submit">Create Channel</button>
+            </form>
+
+            <div class="server-settings-list">
+              <% if (!channels.length) { %>
+                <p class="sub">No channels yet.</p>
+              <% } %>
+
+              <% channels.forEach(function(channel) { %>
+                <article class="server-settings-list-item">
+                  <div class="server-settings-list-head">
+                    <strong><%= channel.type === 'voice' ? 'Voice' : 'Text' %> - #<%= channel.name %></strong>
+                    <a class="chip" href="/app/servers/<%= server.id %>?channel=<%= channel.id %>">Open</a>
+                  </div>
+
+                  <form method="post" action="/app/servers/<%= server.id %>/settings/channels/<%= channel.id %>/update" class="settings-form">
+                    <label>
+                      <span>Name</span>
+                      <input name="name" value="<%= channel.name %>" maxlength="40" required />
+                    </label>
+                    <label>
+                      <span>Topic</span>
+                      <input name="topic" value="<%= channel.topic || '' %>" maxlength="140" />
+                    </label>
+                    <label>
+                      <span>Category</span>
+                      <select name="categoryId">
+                        <option value="">No category</option>
+                        <% categories.forEach(function(category) { %>
+                          <option value="<%= category.id %>" <%= Number(channel.category_id || 0) === Number(category.id) ? 'selected' : '' %>><%= category.name %></option>
+                        <% }) %>
+                      </select>
+                    </label>
+                    <button class="btn" type="submit">Save Channel</button>
+                  </form>
+
+                  <form method="post" action="/app/servers/<%= server.id %>/settings/channels/<%= channel.id %>/delete" onsubmit="return confirm('Delete this channel?')">
+                    <button class="chip danger" type="submit">Delete Channel</button>
+                  </form>
+                </article>
+              <% }) %>
+            </div>
+          </article>
+        <% } %>
+
+        <% if (section === 'categories') { %>
+          <article class="server-settings-pane">
+            <h3 style="margin-top:0;">Categories</h3>
+
+            <form method="post" action="/app/servers/<%= server.id %>/settings/categories/create" class="settings-form">
+              <label>
+                <span>Category Name</span>
+                <input name="name" maxlength="60" placeholder="Community" required />
+              </label>
+              <button class="btn primary" type="submit">Create Category</button>
+            </form>
+
+            <div class="server-settings-list">
+              <% if (!categories.length) { %>
+                <p class="sub">No categories yet.</p>
+              <% } %>
+              <% categories.forEach(function(category) { %>
+                <div class="dm-row slim">
+                  <span class="avatar">F</span>
+                  <div>
+                    <strong><%= category.name %></strong>
+                    <p>Position <%= category.position %></p>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          </article>
+        <% } %>
+
+        <% if (section === 'members') { %>
+          <article class="server-settings-pane">
+            <h3 style="margin-top:0;">Members / Roles / Invites</h3>
+            <div class="cat-card">
+              <p>Manage roles, invite links, and member lifecycle from this section.</p>
+            </div>
+          </article>
+        <% } %>
+
+        <% if (section === 'moderation') { %>
+          <article class="server-settings-pane">
+            <h3 style="margin-top:0;">Moderation</h3>
+            <div class="cat-card">
+              <p>Moderation presets can be added here (automod, filters, slowmode, audit shortcuts).</p>
+            </div>
+          </article>
+        <% } %>
+
+        <% if (section === 'apps') { %>
+          <% const sokratesSettings = sokratesServerApp ? sokratesServerApp.settings : null; %>
+          <% const sokratesInstalled = Boolean(sokratesServerApp && sokratesServerApp.installed); %>
+          <article class="server-settings-pane">
+            <header class="server-settings-list-head">
+              <div>
+                <h3 style="margin:0;">Apps / Integrations</h3>
+                <p class="sub" style="margin:0.25rem 0 0;">Install and manage server apps like in a directory view.</p>
+              </div>
+            </header>
+
+            <div class="server-app-directory-grid" data-testid="server-apps-grid">
+              <article class="server-app-card" data-testid="sokrates-app-card">
+                <div class="server-app-card-head">
+                  <div class="server-app-icon-wrap">
+                    <img class="server-app-icon" src="/ressources/cat.png" alt="Sokrates icon" loading="lazy" />
+                  </div>
+                  <div class="server-app-title-wrap">
+                    <div class="server-app-title-row">
+                      <h4>Sokrates</h4>
+                      <span class="badge fancy">AI</span>
+                      <span class="badge">Bot</span>
+                      <span
+                        class="badge <%= sokratesInstalled ? 'fancy' : '' %>"
+                        data-testid="sokrates-card-install-state"
+                        id="sokratesCardInstallState"
+                      ><%= sokratesInstalled ? 'Installed' : 'Not installed' %></span>
+                    </div>
+                    <p class="sub">Sokrates stellt Rückfragen, klärt Begriffe, reagiert gelegentlich mit Reaktionen.</p>
+                  </div>
+                </div>
+
+                <div class="server-app-capabilities">
+                  <span class="chip">Replies</span>
+                  <span class="chip">Reactions</span>
+                  <span class="chip">Thread-DM</span>
+                  <span class="chip">Server optional</span>
+                </div>
+
+                <div class="server-app-card-actions">
+                  <button type="button" class="chip" id="sokratesAppPermissionsBtn">Permissions</button>
+                  <div class="server-app-card-actions-main">
+                    <% if (canManageSokratesApp) { %>
+                      <button
+                        type="button"
+                        class="btn primary"
+                        id="sokratesCardPrimaryBtn"
+                        data-testid="sokrates-card-primary-action"
+                      ><%= sokratesInstalled ? 'Manage' : 'Add to Server' %></button>
+                      <button
+                        type="button"
+                        class="chip danger"
+                        id="sokratesCardRemoveBtn"
+                        data-testid="sokrates-card-remove-action"
+                        <%= sokratesInstalled ? '' : 'hidden' %>
+                      >Remove</button>
+                    <% } else { %>
+                      <button type="button" class="btn primary is-disabled" data-testid="sokrates-card-primary-action" disabled>Manage</button>
+                    <% } %>
+                  </div>
+                </div>
+                <p class="sub" id="sokratesCardStatus" hidden></p>
+              </article>
+            </div>
+          </article>
+
+          <div class="server-modal" id="sokratesSettingsManageModal" data-testid="sokrates-settings-manage-modal" hidden>
+            <div class="server-modal-backdrop" data-sokrates-manage-close></div>
+            <section class="server-modal-card gradient-card" role="dialog" aria-modal="true" aria-labelledby="sokratesSettingsManageTitle">
+              <header class="server-modal-head">
+                <h3 id="sokratesSettingsManageTitle">Manage Sokrates</h3>
+                <button type="button" class="chip" data-sokrates-manage-close>Close</button>
+              </header>
+              <form class="server-modal-form" id="sokratesSettingsManageForm" data-testid="sokrates-settings-manage-form">
+                <label class="inline">
+                  <input
+                    type="checkbox"
+                    name="enabled"
+                    id="sokratesSettingsEnabledInput"
+                    data-testid="sokrates-settings-enabled-input"
+                    <%= !sokratesSettings || sokratesSettings.enabled ? 'checked' : '' %>
+                  />
+                  <span>Enabled</span>
+                </label>
+
+                <div class="server-modal-grid">
+                  <label>
+                    <span>Reaction Rate</span>
+                    <select name="reactionRate" id="sokratesSettingsReactionRateInput" data-testid="sokrates-settings-reaction-rate-input">
+                      <option value="rare" <%= !sokratesSettings || sokratesSettings.reaction_rate === 'rare' ? 'selected' : '' %>>Rare</option>
+                      <option value="normal" <%= sokratesSettings && sokratesSettings.reaction_rate === 'normal' ? 'selected' : '' %>>Normal</option>
+                      <option value="frequent" <%= sokratesSettings && sokratesSettings.reaction_rate === 'frequent' ? 'selected' : '' %>>Frequent</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Reply Rate</span>
+                    <select name="replyRate" id="sokratesSettingsReplyRateInput" data-testid="sokrates-settings-reply-rate-input">
+                      <option value="off" <%= sokratesSettings && sokratesSettings.reply_rate === 'off' ? 'selected' : '' %>>Off</option>
+                      <option value="rare" <%= !sokratesSettings || sokratesSettings.reply_rate === 'rare' ? 'selected' : '' %>>Rare</option>
+                      <option value="normal" <%= sokratesSettings && sokratesSettings.reply_rate === 'normal' ? 'selected' : '' %>>Normal</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label>
+                  <span>Channels Scope</span>
+                  <select name="channelScope" id="sokratesSettingsChannelScopeInput" data-testid="sokrates-settings-channel-scope-input">
+                    <option value="all" <%= !sokratesSettings || sokratesSettings.channel_scope !== 'selected' ? 'selected' : '' %>>All channels</option>
+                    <option value="selected" <%= sokratesSettings && sokratesSettings.channel_scope === 'selected' ? 'selected' : '' %>>Selected channels</option>
+                  </select>
+                </label>
+
+                <div id="sokratesSettingsChannelAllowlist" data-testid="sokrates-settings-channel-allowlist">
+                  <div class="list-head">Allowed text channels</div>
+                  <% textChannels.forEach(function(channel) { %>
+                    <label class="inline">
+                      <input
+                        type="checkbox"
+                        name="channelsAllowlist"
+                        value="<%= channel.id %>"
+                        <%= sokratesSettings && sokratesSettings.channels_allowlist && sokratesSettings.channels_allowlist.includes(channel.id) ? 'checked' : '' %>
+                      />
+                      <span># <%= channel.name %></span>
+                    </label>
+                  <% }) %>
+                </div>
+
+                <label class="inline">
+                  <input
+                    type="checkbox"
+                    name="providerUnavailableSilent"
+                    id="sokratesProviderSilentInput"
+                    data-testid="sokrates-settings-provider-silent-input"
+                    <%= !sokratesSettings || sokratesSettings.provider_unavailable_behavior !== 'notify' ? 'checked' : '' %>
+                  />
+                  <span>If provider unavailable: do nothing</span>
+                </label>
+
+                <div class="server-modal-actions">
+                  <button type="submit" class="btn primary" id="sokratesSettingsSaveBtn" data-testid="sokrates-settings-save-button">Save</button>
+                  <button type="button" class="chip danger" id="sokratesSettingsModalRemoveBtn" data-testid="sokrates-settings-remove-button">Remove</button>
+                </div>
+                <p class="sub" id="sokratesSettingsManageStatus" hidden></p>
+              </form>
+            </section>
+          </div>
+
+          <script id="sokratesSettingsAppData" type="application/json"><%- JSON.stringify({
+            serverId: server.id,
+            canManage: canManageSokratesApp,
+            installation: sokratesServerApp || null
+          }) %></script>
+        <% } %>
+      </div>
+    </section>
+  </section>
+</main>
+<%- include('../partials/tail') %>

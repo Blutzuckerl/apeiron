@@ -1,0 +1,103 @@
+<%- include('../partials/head', { title }) %>
+<div class="app-bg"></div>
+<main class="app-shell">
+  <%- include('../partials/flash') %>
+
+  <section class="workspace-grid">
+    <%- include('../partials/server-rail', { servers, selectedServer }) %>
+
+    <aside class="nav-rail gradient-card with-userbar">
+      <div class="nav-rail-scroll">
+      <h3>Friends</h3>
+      <div class="friends-tabs">
+        <a class="chip <%= tab === 'online' ? 'active-chip' : '' %>" href="/app/friends?tab=online">Online</a>
+        <a class="chip <%= tab === 'all' ? 'active-chip' : '' %>" href="/app/friends?tab=all">All</a>
+        <a class="chip <%= tab === 'pending' ? 'active-chip' : '' %>" href="/app/friends?tab=pending">Pending</a>
+        <a class="chip <%= tab === 'blocked' ? 'active-chip' : '' %>" href="/app/friends?tab=blocked">Blocked</a>
+      </div>
+
+      <form method="post" action="/app/friends/request" class="new-dm-form">
+        <input type="text" name="handle" placeholder="Friend Request: @name" required />
+        <button class="btn" type="submit">Senden</button>
+      </form>
+
+      <form method="post" action="/app/friends/block" class="new-dm-form">
+        <input type="text" name="handle" placeholder="Block: @name" required />
+        <button class="btn danger" type="submit">Block</button>
+      </form>
+      </div>
+      <%- include('../partials/sidebar-userbar') %>
+    </aside>
+
+    <section class="chat-main gradient-card">
+      <header class="chat-head">
+        <h2>Friends: <%= tab %></h2>
+      </header>
+
+      <div class="timeline">
+        <% if (!rows.length) { %>
+          <div class="cat-card empty">Keine Einträge für diesen Tab.</div>
+        <% } %>
+
+        <% rows.forEach(function(row) { %>
+          <% const friendSubline = row.custom_status_line || ('@' + row.username); %>
+          <article class="msg" data-presence-user-id="<%= row.user_id %>" data-presence-status="<%= row.presence %>" data-presence-last-seen="<%= row.last_seen || '' %>">
+            <div class="avatar member-avatar">
+              <% if (row.avatar_url) { %>
+                <img src="<%= row.avatar_url %>" alt="<%= row.display_name %>" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
+                <span class="avatar-fallback" hidden><%= row.display_name.charAt(0) %></span>
+              <% } else { %>
+                <span class="avatar-fallback"><%= row.display_name.charAt(0) %></span>
+              <% } %>
+              <span class="status-dot <%= row.presence %>" data-presence-dot></span>
+            </div>
+            <div class="bubble">
+              <div class="meta">
+                <strong><%= row.display_name %></strong>
+                <span><%= friendSubline %></span>
+              </div>
+              <div class="actions">
+                <% if (tab === 'pending') { %>
+                  <form method="post" action="/app/friends/request/<%= row.id %>">
+                    <input type="hidden" name="action" value="accept" />
+                    <button class="chip" type="submit">Annehmen</button>
+                  </form>
+                  <form method="post" action="/app/friends/request/<%= row.id %>">
+                    <input type="hidden" name="action" value="decline" />
+                    <button class="chip danger" type="submit">Ablehnen</button>
+                  </form>
+                <% } %>
+
+                <% if (tab === 'all' || tab === 'online') { %>
+                  <form method="post" action="/app/home/new-dm">
+                    <input type="hidden" name="username" value="<%= row.username %>" />
+                    <button class="chip" type="submit">DM öffnen</button>
+                  </form>
+                  <form method="post" action="/app/friends/block">
+                    <input type="hidden" name="handle" value="<%= row.username %>" />
+                    <button class="chip danger" type="submit">Blockieren</button>
+                  </form>
+                <% } %>
+
+                <% if (tab === 'blocked') { %>
+                  <form method="post" action="/app/friends/unblock">
+                    <input type="hidden" name="handle" value="<%= row.username %>" />
+                    <button class="chip" type="submit">Entblocken</button>
+                  </form>
+                <% } %>
+              </div>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+
+    <aside class="info-rail gradient-card">
+      <h3>Hinweise</h3>
+      <div class="cat-card">Presence ist jetzt live und serverseitig autoritativ.</div>
+      <div class="cat-card">Pending zeigt eingehende Requests.</div>
+      <div class="cat-card">Blockierte Kontakte können keine neuen DMs senden.</div>
+    </aside>
+  </section>
+</main>
+<%- include('../partials/tail') %>

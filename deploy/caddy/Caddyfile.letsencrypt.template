@@ -1,0 +1,21 @@
+# Strategy A: Public trusted cert via Let's Encrypt DNS-01
+# Required env:
+#   APEIRON_DOMAIN=apeiron.example.com
+#   DNS_PROVIDER=<provider-module>
+#   DNS_API_TOKEN=<token>
+
+{$APEIRON_DOMAIN} {
+  encode zstd gzip
+
+  # DNS-01 challenge; requires matching Caddy DNS module build.
+  tls {
+    dns {$DNS_PROVIDER} {$DNS_API_TOKEN}
+  }
+
+  # websocket + app traffic
+  reverse_proxy 127.0.0.1:3000 {
+    header_up X-Forwarded-Proto {scheme}
+    header_up X-Forwarded-Host {host}
+    header_up X-Forwarded-For {remote}
+  }
+}

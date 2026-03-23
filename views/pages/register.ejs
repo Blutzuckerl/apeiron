@@ -1,0 +1,39 @@
+<%- include('../partials/head', { title }) %>
+<main class="auth-page">
+  <section class="auth-card gradient-card floaty">
+    <h1>Registrierung</h1>
+    <p class="sub">Erstelle deinen Apeiron-Account</p>
+    <%- include('../partials/flash') %>
+
+    <form method="post" action="/register" class="auth-form" id="registerForm" data-testid="register-form" novalidate>
+      <label>Email
+        <input type="email" name="email" value="<%= formValues && formValues.email ? formValues.email : '' %>" required data-testid="register-email-input" />
+      </label>
+      <label>Displayname
+        <input type="text" name="displayName" value="<%= formValues && formValues.displayName ? formValues.displayName : '' %>" required data-testid="register-display-name-input" />
+      </label>
+      <label>Username
+        <input type="text" name="username" value="<%= formValues && formValues.username ? formValues.username : '' %>" placeholder="ohne @" required data-testid="register-username-input" />
+      </label>
+      <label>Date of Birth
+        <input type="date" name="dateOfBirth" value="<%= formValues && formValues.dateOfBirth ? formValues.dateOfBirth : '' %>" required data-testid="register-dob-input" />
+      </label>
+      <label>Passwort
+        <input type="password" name="password" id="registerPasswordInput" value="<%= formValues && formValues.password ? formValues.password : '' %>" minlength="8" autocomplete="new-password" required data-testid="register-password-input" />
+      </label>
+      <p class="sub" id="registerPasswordHint">Mindestens 8 Zeichen und mindestens 1 Zahl.</p>
+      <p class="inline-error" id="registerPasswordInlineError" data-testid="register-password-error" <%= registerPasswordError ? '' : 'hidden' %>><%= registerPasswordError || '' %></p>
+      <label class="inline">
+        <input type="checkbox" name="acceptPolicy" <%= formValues && formValues.acceptPolicy ? 'checked' : '' %> required data-testid="register-policy-input" /> Ich bestätige Policy und 16+.
+      </label>
+      <button class="btn primary" type="submit" data-testid="register-submit">Account erstellen</button>
+    </form>
+
+    <div class="auth-links">
+      <a href="/login">Schon registriert? Login</a>
+    </div>
+
+    <%- include('../partials/cat-states') %>
+  </section>
+</main>
+<%- include('../partials/tail') %>

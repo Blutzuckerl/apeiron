@@ -1,0 +1,46 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    depends_on:
+      - ollama
+    env_file:
+      - .env
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+      - "3443:3443"
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 3000
+      HTTP_PORT: 3000
+      HTTPS_PORT: 3443
+      HTTPS_ENABLED: 1
+      TLS_MODE: self-signed
+      VOICE_REQUIRE_SECURE_ORIGIN: 1
+      VOICE_REQUIRE_TURN: ${VOICE_REQUIRE_TURN:-1}
+      STUN_URLS: ${STUN_URLS:-stun:stun.l.google.com:19302}
+      TURN_URLS: ${TURN_URLS:-turn:127.0.0.1:3478?transport=udp}
+      TURN_USER: ${TURN_USER:-apeiron}
+      TURN_PASS: ${TURN_PASS:-apeiron-dev-secret}
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3.2:3b
+    volumes:
+      - ./:/app
+      - app_node_modules:/app/node_modules
+      - ./data:/app/data
+    command: sh -c "npm run db:migrate && npm run dev"
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  app_node_modules:
+  ollama_data:

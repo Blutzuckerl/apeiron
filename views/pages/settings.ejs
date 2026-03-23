@@ -1,0 +1,907 @@
+<%- include('../partials/head', { title }) %>
+<div class="app-bg"></div>
+<main class="app-shell">
+  <%- include('../partials/flash') %>
+
+  <section class="workspace-grid settings-grid">
+    <%- include('../partials/server-rail', { servers, selectedServer }) %>
+
+    <aside class="nav-rail gradient-card settings-nav">
+      <h3>User Settings</h3>
+      <a class="chip <%= section === 'my-account' ? 'active-chip' : '' %>" href="/app/settings/my-account">My Account</a>
+      <a class="chip <%= section === 'profile' ? 'active-chip' : '' %>" href="/app/settings/profile">Profile</a>
+      <a class="chip <%= section === 'privacy-safety' ? 'active-chip' : '' %>" href="/app/settings/privacy-safety">Privacy & Safety</a>
+      <a class="chip <%= section === 'notifications' ? 'active-chip' : '' %>" href="/app/settings/notifications">Notifications</a>
+      <a class="chip <%= section === 'connections' ? 'active-chip' : '' %>" href="/app/settings/connections">Connections</a>
+      <a class="chip <%= section === 'appearance' ? 'active-chip' : '' %>" href="/app/settings/appearance">Appearance</a>
+      <a class="chip <%= section === 'accessibility' ? 'active-chip' : '' %>" href="/app/settings/accessibility">Accessibility</a>
+      <a class="chip <%= section === 'voice-video' ? 'active-chip' : '' %>" href="/app/settings/voice-video">Voice & Video</a>
+      <a class="chip <%= section === 'lan-access' ? 'active-chip' : '' %>" href="/app/settings/lan-access">LAN Access</a>
+      <a class="chip <%= section === 'language' ? 'active-chip' : '' %>" href="/app/settings/language">Language</a>
+      <a class="chip <%= section === 'ai' ? 'active-chip' : '' %>" href="/app/settings/ai">AI</a>
+    </aside>
+
+    <section class="chat-main gradient-card">
+      <% if (section === 'my-account') { %>
+        <header class="chat-head"><h2>My Account</h2></header>
+
+        <form method="post" action="/app/settings/my-account/save" class="settings-form" data-dirty-track="true">
+          <input type="hidden" name="accountAction" value="identity" />
+          <label>Email
+            <input type="email" name="email" value="<%= account.pending_email || account.email %>" required />
+          </label>
+          <label>Username / Handle
+            <input type="text" name="username" value="<%= account.username %>" required pattern="[a-z0-9_]{3,32}" />
+          </label>
+          <% if (account.pending_email) { %>
+            <p class="sub">Pending verify: <%= account.pending_email %></p>
+          <% } %>
+          <button class="btn" type="submit">Identity speichern</button>
+        </form>
+
+        <form method="post" action="/app/settings/my-account/save" class="settings-form" data-dirty-track="true">
+          <input type="hidden" name="accountAction" value="password" />
+          <label>Current password
+            <input type="password" name="currentPassword" required />
+          </label>
+          <label>New password
+            <input type="password" name="newPassword" minlength="8" required />
+          </label>
+          <label>Confirm new password
+            <input type="password" name="confirmPassword" minlength="8" required data-match="newPassword" />
+          </label>
+          <button class="btn" type="submit">Passwort ändern</button>
+        </form>
+
+        <div class="settings-danger-row">
+          <form method="post" action="/app/settings/my-account/save">
+            <input type="hidden" name="accountAction" value="logout-others" />
+            <button class="chip" type="submit">Log out others</button>
+          </form>
+          <form method="post" action="/logout" onsubmit="return confirm('Wirklich abmelden?')">
+            <button class="chip danger" type="submit">Log Out</button>
+          </form>
+          <form method="post" action="/app/settings/my-account/save" onsubmit="return confirm('Account deaktivieren?')">
+            <input type="hidden" name="accountAction" value="deactivate" />
+            <button class="chip danger" type="submit">Deactivate account</button>
+          </form>
+          <form method="post" action="/app/settings/my-account/save" onsubmit="return confirm('Account endgültig löschen?')">
+            <input type="hidden" name="accountAction" value="delete" />
+            <button class="chip danger" type="submit">Delete account</button>
+          </form>
+        </div>
+      <% } %>
+
+      <% if (section === 'profile') { %>
+        <header class="chat-head"><h2>Profile</h2></header>
+        <form method="post" action="/app/settings/profile/save" class="settings-form" data-dirty-track="true" id="profileSettingsForm" data-profile-form="true">
+          <input type="hidden" name="avatarData" id="avatarDataInput" value="" />
+          <input type="hidden" name="bannerData" id="bannerDataInput" value="" />
+          <input type="hidden" name="avatarRemove" id="avatarRemoveInput" value="0" />
+          <input type="hidden" name="bannerRemove" id="bannerRemoveInput" value="0" />
+          <input type="hidden" name="aboutPlusJson" id="aboutPlusJsonInput" value="" />
+
+          <div class="upload-control">
+            <div class="list-head">Avatar</div>
+            <input id="avatarFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+            <div class="composer-tools">
+              <button type="button" class="btn" id="chooseAvatarBtn">Choose Avatar</button>
+              <button type="button" class="chip" id="removeAvatarBtn">Remove Avatar</button>
+            </div>
+            <p class="sub">PNG/JPG/WEBP/GIF, max 2MB.</p>
+            <p class="inline-error" id="avatarFileError" hidden></p>
+          </div>
+
+          <div class="upload-control">
+            <div class="list-head">Banner</div>
+            <input id="bannerFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+            <div class="composer-tools">
+              <button type="button" class="btn" id="chooseBannerBtn">Choose Banner</button>
+              <button type="button" class="chip" id="removeBannerBtn">Remove Banner</button>
+            </div>
+            <p class="sub">PNG/JPG/WEBP/GIF, max 4MB.</p>
+            <p class="inline-error" id="bannerFileError" hidden></p>
+          </div>
+
+          <label>Displayname
+            <input id="profileDisplayName" type="text" name="displayName" value="<%= account.display_name || '' %>" required />
+          </label>
+          <label>About me
+            <textarea id="profileAboutMe" name="aboutMe" maxlength="200"><%= account.about_me || '' %></textarea>
+          </label>
+          <section class="profile-settings-about-plus">
+            <div class="list-head">About+ (Structured Profile)</div>
+            <p class="sub">Baue kompakte Showcase-Cards. Sichtbare und ausgefüllte Cards erscheinen im About+-Tab.</p>
+            <div class="about-plus-builder-toolbar">
+              <button type="button" class="btn" id="aboutPlusOpenPickerBtn" data-testid="about-plus-open-picker">Add Card</button>
+              <p class="sub">Template-first: erst Karte wählen, dann nur die passenden Felder ausfüllen.</p>
+            </div>
+            <div id="aboutPlusBuilderList" class="about-plus-builder-list" data-testid="about-plus-builder-list"></div>
+            <div id="aboutPlusTemplatePicker" class="about-plus-template-picker gradient-card" hidden>
+              <div class="about-plus-template-head">
+                <strong>Choose a Card Template</strong>
+                <button type="button" class="chip" id="aboutPlusClosePickerBtn">Close</button>
+              </div>
+              <div id="aboutPlusTemplateGrid" class="about-plus-template-grid"></div>
+            </div>
+            <script type="application/json" id="aboutPlusSettingsData"><%- JSON.stringify(aboutPlusBuilder || {}).replace(/</g, '\\u003c') %></script>
+          </section>
+          <label>Status
+            <select id="profilePresenceStatus" name="presenceStatus">
+              <option value="online" <%= account.presence_status === 'online' ? 'selected' : '' %>>online</option>
+              <option value="idle" <%= account.presence_status === 'idle' ? 'selected' : '' %>>idle</option>
+              <option value="dnd" <%= account.presence_status === 'dnd' ? 'selected' : '' %>>dnd</option>
+              <option value="invisible" <%= account.presence_status === 'invisible' ? 'selected' : '' %>>invisible</option>
+            </select>
+          </label>
+          <label>Custom status emoji
+            <select id="profileCustomEmoji" name="customStatusEmoji">
+              <option value="" <%= !account.custom_status_emoji ? 'selected' : '' %>>none</option>
+              <option value="😀" <%= account.custom_status_emoji === '😀' ? 'selected' : '' %>>😀</option>
+              <option value="😎" <%= account.custom_status_emoji === '😎' ? 'selected' : '' %>>😎</option>
+              <option value="🔥" <%= account.custom_status_emoji === '🔥' ? 'selected' : '' %>>🔥</option>
+              <option value="🎯" <%= account.custom_status_emoji === '🎯' ? 'selected' : '' %>>🎯</option>
+              <option value="💤" <%= account.custom_status_emoji === '💤' ? 'selected' : '' %>>💤</option>
+              <option value="🚀" <%= account.custom_status_emoji === '🚀' ? 'selected' : '' %>>🚀</option>
+              <option value="❤️" <%= account.custom_status_emoji === '❤️' ? 'selected' : '' %>>❤️</option>
+            </select>
+          </label>
+          <label>Custom status message
+            <input id="profileCustomText" type="text" name="customStatusText" value="<%= account.custom_status_text || '' %>" maxlength="120" />
+          </label>
+          <label>Custom status expiry
+            <input type="datetime-local" name="customStatusExpiresAt" value="<%= account.custom_status_expires_at ? account.custom_status_expires_at.slice(0,16) : '' %>" />
+          </label>
+          <button class="btn primary" type="submit">Save</button>
+
+          <input type="hidden" id="profilePreviewUsername" value="<%= account.username || '' %>" />
+          <input type="hidden" id="profilePreviewAvatarSaved" value="<%= account.avatar_url || '' %>" />
+          <input type="hidden" id="profilePreviewBannerSaved" value="<%= account.banner_url || '' %>" />
+        </form>
+      <% } %>
+
+      <% if (section === 'privacy-safety') { %>
+        <header class="chat-head"><h2>Privacy & Safety</h2></header>
+        <form method="post" action="/app/settings/privacy-safety/save" class="settings-form" data-dirty-track="true">
+          <label>DM permissions
+            <select name="dmPermission">
+              <option value="all" <%= settings.dm_permission === 'all' ? 'selected' : '' %>>everyone</option>
+              <option value="server_members" <%= settings.dm_permission === 'server_members' ? 'selected' : '' %>>server members</option>
+              <option value="friends" <%= settings.dm_permission === 'friends' ? 'selected' : '' %>>friends</option>
+            </select>
+          </label>
+          <label>Friend requests
+            <select name="friendRequestPermission">
+              <option value="everyone" <%= settings.friend_request_permission === 'everyone' ? 'selected' : '' %>>everyone</option>
+              <option value="friends_of_friends" <%= settings.friend_request_permission === 'friends_of_friends' ? 'selected' : '' %>>friends-of-friends</option>
+              <option value="server_members" <%= settings.friend_request_permission === 'server_members' ? 'selected' : '' %>>server members</option>
+            </select>
+          </label>
+          <label class="inline"><input type="checkbox" name="messageRequestsEnabled" <%= settings.message_requests_enabled ? 'checked' : '' %> /> Message requests instead of direct DM</label>
+          <label>Block behavior
+            <select name="blockHistoryMode">
+              <option value="visible" <%= settings.block_history_mode === 'visible' ? 'selected' : '' %>>History visible</option>
+              <option value="hidden" <%= settings.block_history_mode === 'hidden' ? 'selected' : '' %>>History hidden</option>
+            </select>
+          </label>
+          <button class="btn primary" type="submit">Save</button>
+        </form>
+      <% } %>
+
+      <% if (section === 'notifications') { %>
+        <header class="chat-head"><h2>Notifications</h2></header>
+        <form method="post" action="/app/settings/notifications/save" class="settings-form" data-dirty-track="true">
+          <label class="inline"><input type="checkbox" name="desktopPush" <%= settings.notifications_desktop ? 'checked' : '' %> /> Desktop push</label>
+          <label class="inline"><input type="checkbox" name="soundsEnabled" <%= settings.notifications_sounds ? 'checked' : '' %> /> Sounds on/off</label>
+          <label>Mentions
+            <select name="mentionsMode">
+              <option value="me" <%= settings.notifications_mentions === 'me' ? 'selected' : '' %>>@me only</option>
+              <option value="roles" <%= settings.notifications_mentions === 'roles' ? 'selected' : '' %>>roles</option>
+              <option value="all" <%= settings.notifications_mentions === 'all' ? 'selected' : '' %>>all</option>
+            </select>
+          </label>
+          <button class="btn primary" type="submit">Save</button>
+        </form>
+      <% } %>
+
+      <% if (section === 'connections') { %>
+        <header class="chat-head"><h2>Connections</h2></header>
+        <form method="post" action="/app/settings/connections/save" class="settings-form" data-dirty-track="true">
+          <label>Connections (one per line, e.g. Steam: user123)
+            <textarea name="connections" rows="8"><%= (() => { try { return JSON.parse(settings.connections_json || '[]').join('\n'); } catch (_) { return ''; } })() %></textarea>
+          </label>
+          <button class="btn primary" type="submit">Save</button>
+        </form>
+      <% } %>
+
+      <% if (section === 'appearance') { %>
+        <header class="chat-head"><h2>Appearance</h2></header>
+        <form method="post" action="/app/settings/appearance/save" class="settings-form" data-dirty-track="true">
+          <label>Theme
+            <select name="theme">
+              <option value="dark" <%= settings.appearance_theme === 'dark' ? 'selected' : '' %>>dark</option>
+              <option value="light" <%= settings.appearance_theme === 'light' ? 'selected' : '' %>>light</option>
+            </select>
+          </label>
+          <label>Font scaling
+            <input type="range" name="fontScale" min="80" max="140" value="<%= settings.appearance_font_scale || 100 %>" />
+          </label>
+          <label>Message density
+            <select name="density">
+              <option value="compact" <%= settings.appearance_density === 'compact' ? 'selected' : '' %>>compact</option>
+              <option value="cozy" <%= settings.appearance_density === 'cozy' ? 'selected' : '' %>>cozy</option>
+            </select>
+          </label>
+          <label>Avatars
+            <select name="avatarGrouping">
+              <option value="always" <%= settings.appearance_avatar_grouping === 'always' ? 'selected' : '' %>>always</option>
+              <option value="grouped" <%= settings.appearance_avatar_grouping === 'grouped' ? 'selected' : '' %>>grouped</option>
+            </select>
+          </label>
+          <label class="inline"><input type="checkbox" name="reducedMotion" <%= settings.appearance_reduced_motion ? 'checked' : '' %> /> Reduced motion</label>
+          <button class="btn primary" type="submit">Save</button>
+        </form>
+      <% } %>
+
+      <% if (section === 'accessibility') { %>
+        <header class="chat-head"><h2>Accessibility</h2></header>
+        <form method="post" action="/app/settings/accessibility/save" class="settings-form" data-dirty-track="true">
+          <label class="inline"><input type="checkbox" name="screenReaderHints" <%= settings.accessibility_screen_reader_hints ? 'checked' : '' %> /> Screen reader mode hints</label>
+          <label class="inline"><input type="checkbox" name="highContrast" <%= settings.accessibility_high_contrast ? 'checked' : '' %> /> High contrast</label>
+          <button class="btn primary" type="submit">Save</button>
+        </form>
+      <% } %>
+
+      <% if (section === 'voice-video') { %>
+        <header class="chat-head"><h2>Voice & Video</h2></header>
+        <form method="post" action="/app/settings/voice-video/save" class="settings-form" data-dirty-track="true">
+          <label>Input device
+            <input type="text" name="inputDevice" value="<%= settings.voice_input_device || 'Default Microphone' %>" />
+          </label>
+          <label>Output device
+            <input type="text" name="outputDevice" value="<%= settings.voice_output_device || 'Default Speakers' %>" />
+          </label>
+          <label>Input sensitivity
+            <input type="range" name="inputSensitivity" min="0" max="100" value="<%= settings.voice_input_sensitivity || 50 %>" />
+          </label>
+          <label class="inline"><input type="checkbox" name="echoCancellation" <%= settings.voice_echo_cancellation ? 'checked' : '' %> /> Echo cancellation</label>
+          <label class="inline"><input type="checkbox" name="noiseSuppression" <%= settings.voice_noise_suppression ? 'checked' : '' %> /> Noise suppression</label>
+          <label>Camera
+            <input type="text" name="cameraDevice" value="<%= settings.voice_camera_device || 'Default Camera' %>" />
+          </label>
+          <label>Push-to-talk keybind
+            <input type="text" name="pttKey" value="<%= settings.voice_ptt_key || 'V' %>" maxlength="20" />
+          </label>
+          <button class="btn" type="button">Test mic</button>
+          <button class="btn primary" type="submit">Save</button>
+        </form>
+      <% } %>
+
+      <% if (section === 'lan-access') { %>
+        <header class="chat-head"><h2>LAN Access</h2></header>
+        <section class="settings-form lan-access-panel" data-testid="lan-access-panel">
+          <p class="sub">Nutze die gleichen Router/WLAN-Subnetze. Verwende die HTTPS-URL für Login, Chat und Voice.</p>
+          <div class="cat-card" id="lanAccessStatus" data-testid="lan-access-status">Lade LAN-Informationen…</div>
+          <div id="lanAccessLinks" class="lan-access-links" data-testid="lan-access-links"></div>
+          <div class="lan-qr-grid" id="lanAccessQrGrid" data-testid="lan-qr-grid" hidden>
+            <article class="cat-card lan-qr-card" id="lanAccessBasicQrCard" data-testid="lan-qr-basic-card" hidden>
+              <div class="lan-qr-card-head">
+                <div class="list-head">Secure QR</div>
+                <button type="button" class="chip" data-qr-open="basic" data-testid="lan-qr-basic-preview">Vorschau</button>
+              </div>
+              <button type="button" class="lan-qr-image-button" data-qr-open="basic" data-testid="lan-qr-basic-image-button">
+                <img id="lanAccessBasicQrImage" data-testid="lan-qr-basic-image" alt="LAN Basic URL QR code" hidden />
+              </button>
+              <p class="sub" id="lanAccessBasicQrTarget" data-testid="lan-qr-basic-target"></p>
+              <div class="lan-qr-actions">
+                <button type="button" class="chip" id="lanAccessBasicQrCopy" data-copy-url="" data-testid="lan-qr-basic-copy">Copy Link</button>
+              </div>
+            </article>
+          </div>
+          <div class="cat-card">
+            <div class="lan-link-row">
+              <button type="button" class="btn" id="lanAccessSelfTestButton" data-testid="lan-self-test-button">LAN Self-Test</button>
+              <p class="sub" id="lanAccessSelfTestResult" data-testid="lan-self-test-result">Noch nicht ausgeführt.</p>
+            </div>
+          </div>
+          <div class="lan-qr-modal-backdrop" id="lanAccessQrModal" data-testid="lan-qr-modal" hidden>
+            <div class="cat-card lan-qr-modal" role="dialog" aria-modal="true" aria-labelledby="lanAccessQrModalTitle">
+              <div class="lan-qr-modal-head">
+                <h3 id="lanAccessQrModalTitle">Scan to connect</h3>
+                <button type="button" class="chip" data-qr-modal-close data-testid="lan-qr-modal-close">Close</button>
+              </div>
+              <img id="lanAccessQrModalImage" data-testid="lan-qr-modal-image" alt="LAN QR preview" />
+              <p class="sub" id="lanAccessQrModalTarget" data-testid="lan-qr-modal-target"></p>
+              <div class="lan-qr-actions">
+                <button type="button" class="chip" id="lanAccessQrModalCopy" data-copy-url="" data-testid="lan-qr-modal-copy">Copy Link</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <script>
+          (() => {
+            const statusNode = document.getElementById('lanAccessStatus');
+            const linksNode = document.getElementById('lanAccessLinks');
+            const qrGrid = document.getElementById('lanAccessQrGrid');
+            const qrModal = document.getElementById('lanAccessQrModal');
+            const qrModalImage = document.getElementById('lanAccessQrModalImage');
+            const qrModalTarget = document.getElementById('lanAccessQrModalTarget');
+            const qrModalCopy = document.getElementById('lanAccessQrModalCopy');
+            const basicQrCard = document.getElementById('lanAccessBasicQrCard');
+            const basicQrImage = document.getElementById('lanAccessBasicQrImage');
+            const basicQrTarget = document.getElementById('lanAccessBasicQrTarget');
+            const basicQrCopy = document.getElementById('lanAccessBasicQrCopy');
+            const selfTestButton = document.getElementById('lanAccessSelfTestButton');
+            const selfTestResult = document.getElementById('lanAccessSelfTestResult');
+            if (
+              !statusNode || !linksNode || !qrGrid || !qrModal || !qrModalImage || !qrModalTarget || !qrModalCopy
+              || !basicQrCard || !basicQrImage || !basicQrTarget || !basicQrCopy
+              || !selfTestButton || !selfTestResult
+            ) {
+              return;
+            }
+
+            const qrState = {
+              basic: {
+                label: 'Secure QR',
+                url: '',
+                dataUrl: '',
+                enabled: false
+              }
+            };
+
+            const escapeHtml = (value) => String(value || '')
+              .replaceAll('&', '&amp;')
+              .replaceAll('<', '&lt;')
+              .replaceAll('>', '&gt;')
+              .replaceAll('"', '&quot;')
+              .replaceAll("'", '&#39;');
+
+            const setStatus = (message, tone = '') => {
+              statusNode.textContent = String(message || '');
+              statusNode.classList.remove('is-ok', 'is-warn', 'is-error');
+              if (tone) {
+                statusNode.classList.add(tone);
+              }
+            };
+
+            const copyText = async (value) => {
+              const text = String(value || '').trim();
+              if (!text) {
+                return false;
+              }
+              try {
+                if (navigator.clipboard?.writeText) {
+                  await navigator.clipboard.writeText(text);
+                  return true;
+                }
+              } catch (_error) {}
+              const textarea = document.createElement('textarea');
+              textarea.value = text;
+              textarea.setAttribute('readonly', 'readonly');
+              textarea.style.position = 'fixed';
+              textarea.style.left = '-9999px';
+              document.body.appendChild(textarea);
+              textarea.select();
+              const ok = document.execCommand('copy');
+              textarea.remove();
+              return ok;
+            };
+
+            const setQrEntry = (config) => {
+              const label = String(config?.label || 'Secure QR');
+              const url = String(config?.url || '').trim();
+              const dataUrl = String(config?.dataUrl || '').trim();
+              const enabled = Boolean(config?.enabled) && Boolean(url) && Boolean(dataUrl);
+              qrState.basic = {
+                label,
+                url,
+                dataUrl,
+                enabled
+              };
+
+              const previewButtons = [...basicQrCard.querySelectorAll('[data-qr-open]')];
+
+              basicQrCard.hidden = false;
+              basicQrTarget.textContent = url || 'Kein Link verfügbar';
+              basicQrCopy.dataset.copyUrl = url;
+              basicQrCopy.disabled = !enabled;
+              basicQrCopy.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+              previewButtons.forEach((button) => {
+                if (button instanceof HTMLButtonElement) {
+                  button.disabled = !enabled;
+                  button.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+                }
+              });
+
+              if (enabled) {
+                basicQrImage.src = dataUrl;
+                basicQrImage.hidden = false;
+                basicQrCard.classList.remove('is-disabled');
+                return;
+              }
+
+              basicQrImage.removeAttribute('src');
+              basicQrImage.hidden = true;
+              basicQrCard.classList.add('is-disabled');
+            };
+
+            const openQrModal = () => {
+              const entry = qrState.basic;
+              if (!entry?.enabled) {
+                return;
+              }
+              const titleNode = document.getElementById('lanAccessQrModalTitle');
+              if (titleNode) {
+                titleNode.textContent = `${entry.label} • Scan to connect`;
+              }
+              qrModalImage.src = entry.dataUrl;
+              qrModalTarget.textContent = entry.url;
+              qrModalCopy.dataset.copyUrl = entry.url;
+              qrModal.hidden = false;
+            };
+
+            const closeQrModal = () => {
+              qrModal.hidden = true;
+            };
+
+            const pageOrigin = window.location.origin;
+            const apiHeaders = () => ({
+              Accept: 'application/json',
+              'X-Apeiron-Origin': pageOrigin
+            });
+
+            const renderLinks = (payload) => {
+              const links = Array.isArray(payload?.links) ? payload.links : [];
+              const currentOriginDetected = String(payload?.currentOriginDetected || '').trim();
+              const secureBaseUrl = String(pageOrigin || '').trim();
+              const secureLoginUrl = new URL('/login', secureBaseUrl).toString();
+              const secureHealthUrl = new URL('/healthz', secureBaseUrl).toString();
+              const basicBaseUrl = String(payload?.basicBaseUrl || '').trim();
+              const basicLoginUrl = String(payload?.basicLoginUrl || '').trim();
+              const listeningPorts = Array.isArray(payload?.listeningPorts) ? payload.listeningPorts : [];
+              const runtimeHints = payload?.runtimeHints || {};
+              const backendQrTarget = String(payload?.basicQrTarget || payload?.secureLoginUrl || '').trim();
+              const qrMatchesClientOrigin = !backendQrTarget || backendQrTarget === secureLoginUrl;
+              if (!secureBaseUrl) {
+                linksNode.innerHTML = '<div class="cat-card">Keine verwertbare Request-Origin erkannt. Setze APEIRON_PUBLIC_BASE_URL als Fallback.</div>';
+                qrGrid.hidden = true;
+                return;
+              }
+
+              const diagnostics = links.length
+                ? `<p class="sub">Lokale Adapter (Diagnose, ggf. container-intern und nicht per WLAN erreichbar): ${escapeHtml(links.map((entry) => `${entry.interface}:${entry.address}`).join(', '))}</p>`
+                : '<p class="sub">Keine lokalen RFC1918-Adapter erkannt.</p>';
+              const runtimeHintBlock = runtimeHints?.isWsl
+                ? `
+                  <p class="sub">WSL erkannt: eingehende LAN-Verbindungen brauchen oft Windows Portproxy + Firewall-Freigabe.</p>
+                  ${runtimeHints?.hasWslPortProxyTemplate
+                    ? `<pre>${escapeHtml((runtimeHints.portProxyCommands || []).join('\n'))}</pre>`
+                    : '<p class="sub">Setze optional `WSL_IP`, damit die Portproxy-Befehle automatisch angezeigt werden.</p>'
+                  }
+                `
+                : '';
+              const containerHint = runtimeHints?.isContainer
+                ? '<p class="sub">Container erkannt: pruefe Docker Port-Publishing (`-p 3000:3000 -p 3443:3443`) und Host-Firewall.</p>'
+                : '';
+
+              linksNode.innerHTML = `
+                <article class="cat-card lan-link-card" data-testid="lan-link-card">
+                  <div class="list-head">Origin aus aktueller Browser-Session</div>
+                  <p class="sub">Current Origin detected (client): <code>${escapeHtml(secureBaseUrl)}</code></p>
+                  <p class="sub">Server detected origin: <code>${escapeHtml(currentOriginDetected || '(leer)')}</code></p>
+                  <div class="lan-link-row">
+                    <div>
+                      <p class="sub">Secure (LAN)</p>
+                      <code data-testid="lan-basic-url">${escapeHtml(secureBaseUrl)}</code>
+                    </div>
+                    <button type="button" class="chip" data-copy-url="${escapeHtml(secureBaseUrl)}">Copy Link</button>
+                  </div>
+                  <div class="lan-link-row">
+                    <div>
+                      <p class="sub">Secure (Mirror)</p>
+                      <code data-testid="lan-full-url">${escapeHtml(secureBaseUrl)}</code>
+                    </div>
+                    <button type="button" class="chip" data-copy-url="${escapeHtml(secureBaseUrl)}">Copy Link</button>
+                  </div>
+                  <div class="lan-link-row">
+                    <div>
+                      <p class="sub">HTTP (no mic/voice)</p>
+                      <code>${escapeHtml(basicBaseUrl || 'nicht aktiv')}</code>
+                    </div>
+                    <button type="button" class="chip" data-copy-url="${escapeHtml(basicBaseUrl)}" ${basicBaseUrl ? '' : 'disabled'}>Copy Link</button>
+                  </div>
+                  <p class="sub">Health endpoint: <code data-testid="lan-healthz-url">${escapeHtml(secureHealthUrl)}</code></p>
+                  <p class="sub"><a href="/ca">TLS Trust Setup (/ca)</a></p>
+                  <p class="sub">Listening ports detected (server-side): ${escapeHtml(
+                    listeningPorts.length
+                      ? listeningPorts.map((entry) => `${entry.name}:${entry.host}:${entry.port}:${entry.enabled ? 'enabled' : 'disabled'}`).join(' | ')
+                      : '(keine Angaben)'
+                  )}</p>
+                  ${containerHint}
+                  ${runtimeHintBlock}
+                  ${diagnostics}
+                </article>
+              `;
+
+              setQrEntry({
+                label: 'Secure QR',
+                url: secureLoginUrl,
+                dataUrl: String(payload?.basicQrDataUrl || ''),
+                enabled: Boolean(secureLoginUrl && payload?.basicQrDataUrl && qrMatchesClientOrigin)
+              });
+
+              qrGrid.hidden = !Boolean(secureLoginUrl && payload?.basicQrDataUrl && qrMatchesClientOrigin);
+              selfTestResult.textContent = basicLoginUrl
+                ? `Self-Test bereit: secure=${secureLoginUrl}, basic=${basicLoginUrl}`
+                : `Self-Test bereit: secure=${secureLoginUrl}`;
+              if (!qrMatchesClientOrigin) {
+                selfTestResult.textContent = `QR mismatch: backend=${backendQrTarget || '(leer)'} client=${secureLoginUrl}`;
+              }
+            };
+
+            const renderSelfTest = (result) => {
+              if (!result?.ok) {
+                selfTestResult.textContent = `Self-Test fehlgeschlagen (${String(result?.error || result?.message || 'unknown')}).`;
+                selfTestResult.dataset.secureOk = '0';
+                return;
+              }
+              const probes = result.probes || {};
+              const summarize = (label, probe) => {
+                const ok = probe?.ok ? 'ok' : 'fail';
+                const status = Number(probe?.status || 0);
+                const rtt = Number(probe?.rttMs || 0);
+                const error = String(probe?.error || '').trim();
+                return `${label}:${ok}:${status || '-'}:${rtt}ms${error ? `:${error}` : ''}`;
+              };
+              const summarizeTcp = (label, probe) => {
+                const ok = probe?.ok ? 'ok' : 'fail';
+                const rtt = Number(probe?.rttMs || 0);
+                const error = String(probe?.error || '').trim();
+                const host = String(probe?.host || '');
+                const port = Number(probe?.port || 0);
+                return `${label}:${ok}:${host}:${port || '-'}:${rtt}ms${error ? `:${error}` : ''}`;
+              };
+              selfTestResult.textContent = [
+                summarize('secure', probes.secure),
+                summarize('basic', probes.basic),
+                summarizeTcp('tcp_https', probes.tcp_https),
+                summarizeTcp('tcp_http', probes.tcp_http)
+              ].join(' | ');
+              selfTestResult.dataset.secureOk = probes?.secure?.ok ? '1' : '0';
+              selfTestResult.dataset.secureStatus = String(Number(probes?.secure?.status || 0));
+            };
+
+            const runSelfTest = async () => {
+              selfTestButton.disabled = true;
+              selfTestResult.textContent = 'Self-Test läuft…';
+              try {
+                const probeSameOrigin = async (pathName) => {
+                  const startedAt = Date.now();
+                  try {
+                    const response = await fetch(pathName, { cache: 'no-store' });
+                    return {
+                      ok: response.ok,
+                      status: Number(response.status || 0),
+                      rttMs: Math.max(0, Date.now() - startedAt),
+                      error: ''
+                    };
+                  } catch (error) {
+                    return {
+                      ok: false,
+                      status: 0,
+                      rttMs: Math.max(0, Date.now() - startedAt),
+                      error: String(error?.message || 'fetch_failed')
+                    };
+                  }
+                };
+                const secureProbe = await probeSameOrigin('/healthz');
+                const basicProbe = {
+                  ok: false,
+                  status: 0,
+                  rttMs: 0,
+                  error: 'skipped'
+                };
+                if (window.location.protocol === 'http:') {
+                  const basicCandidate = await probeSameOrigin('/healthz');
+                  basicProbe.ok = basicCandidate.ok;
+                  basicProbe.status = basicCandidate.status;
+                  basicProbe.rttMs = basicCandidate.rttMs;
+                  basicProbe.error = basicCandidate.error;
+                }
+                const response = await fetch('/api/system/lan/self-test', {
+                  headers: apiHeaders()
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                  throw new Error(String(data?.error || response.status || 'self_test_failed'));
+                }
+                renderSelfTest({
+                  ok: true,
+                  probes: {
+                    secure: secureProbe,
+                    basic: basicProbe,
+                    tcp_https: data?.probes?.tcp_https || {},
+                    tcp_http: data?.probes?.tcp_http || {}
+                  }
+                });
+              } catch (error) {
+                selfTestResult.textContent = `Self-Test fehlgeschlagen (${String(error?.message || 'Fehler')}).`;
+                selfTestResult.dataset.secureOk = '0';
+              } finally {
+                selfTestButton.disabled = false;
+              }
+            };
+
+            document.addEventListener('click', async (event) => {
+              const target = event.target;
+              if (!(target instanceof HTMLElement)) {
+                return;
+              }
+              const openQrButton = target.closest('[data-qr-open]');
+              if (openQrButton instanceof HTMLButtonElement) {
+                openQrModal();
+                return;
+              }
+              const closeQrButton = target.closest('[data-qr-modal-close]');
+              if (closeQrButton instanceof HTMLButtonElement) {
+                closeQrModal();
+                return;
+              }
+              if (target === qrModal) {
+                closeQrModal();
+                return;
+              }
+              const button = target.closest('button[data-copy-url]');
+              if (!(button instanceof HTMLButtonElement)) {
+                return;
+              }
+              const value = String(button.dataset.copyUrl || '');
+              if (!value) {
+                return;
+              }
+              const ok = await copyText(value);
+              setStatus(ok ? `Kopiert: ${value}` : 'Copy fehlgeschlagen.', ok ? 'is-ok' : 'is-error');
+            });
+            selfTestButton.addEventListener('click', () => {
+              void runSelfTest();
+            });
+
+            const loadLanData = async () => {
+              try {
+                const response = await fetch('/api/system/lan', {
+                  headers: apiHeaders()
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.ok) {
+                  throw new Error(String(data.error || response.status || 'lan_fetch_failed'));
+                }
+                renderLinks(data);
+                const turnMissing = Boolean(data.turnRequired) && !Boolean(data.turnConfigured);
+                const source = String(data.baseUrlSource || 'none');
+                const secureBaseUrl = String(data.secureBaseUrl || '').trim();
+                setStatus(
+                  data.httpsEnabled
+                    ? `HTTPS aktiv (Port ${data.httpsPort}).${turnMissing ? ' TURN fehlt (Voice blockiert).' : ' TURN aktiv.'} QR-Target: ${secureBaseUrl || '(leer)'} (source=${source}).`
+                    : 'HTTPS aktuell nicht aktiv. Voice im LAN erfordert Full Mode über HTTPS.',
+                  data.httpsEnabled && !turnMissing ? 'is-ok' : 'is-warn'
+                );
+              } catch (error) {
+                linksNode.innerHTML = '';
+                qrGrid.hidden = true;
+                setStatus(`LAN-Daten konnten nicht geladen werden (${String(error?.message || 'Fehler')}).`, 'is-error');
+              }
+            };
+
+            void loadLanData();
+          })();
+        </script>
+      <% } %>
+
+      <% if (section === 'language') { %>
+        <header class="chat-head"><h2>Language</h2></header>
+        <form method="post" action="/app/settings/language/save" class="settings-form" data-dirty-track="true">
+          <label>Language
+            <select name="language">
+              <option value="de" <%= settings.app_language === 'de' ? 'selected' : '' %>>Deutsch</option>
+              <option value="en" <%= settings.app_language === 'en' ? 'selected' : '' %>>English</option>
+              <option value="fr" <%= settings.app_language === 'fr' ? 'selected' : '' %>>Français</option>
+              <option value="es" <%= settings.app_language === 'es' ? 'selected' : '' %>>Español</option>
+              <option value="it" <%= settings.app_language === 'it' ? 'selected' : '' %>>Italiano</option>
+            </select>
+          </label>
+          <button class="btn primary" type="submit">Save</button>
+        </form>
+      <% } %>
+
+      <% if (section === 'ai') { %>
+        <header class="chat-head"><h2>AI</h2></header>
+        <form method="post" action="/app/settings/ai/save" class="settings-form" data-dirty-track="true">
+          <label>LLM Provider
+            <select name="providerMode">
+              <option value="auto" <%= (settings.llm_provider_mode || 'auto') === 'auto' ? 'selected' : '' %>>Auto (OpenAI -> Ollama)</option>
+              <option value="openai" <%= settings.llm_provider_mode === 'openai' ? 'selected' : '' %>>OpenAI</option>
+              <option value="ollama" <%= settings.llm_provider_mode === 'ollama' ? 'selected' : '' %>>Ollama</option>
+            </select>
+          </label>
+          <label>OpenAI model
+            <input
+              type="text"
+              name="openaiModel"
+              value="<%= settings.llm_openai_model || '' %>"
+              placeholder="<%= aiAvailability.openaiModel || 'gpt-4o-mini' %>"
+              maxlength="120"
+            />
+          </label>
+          <label>Ollama model
+            <input
+              type="text"
+              name="ollamaModel"
+              value="<%= settings.llm_ollama_model || '' %>"
+              placeholder="<%= aiAvailability.ollamaModel || 'llama3.2' %>"
+              maxlength="120"
+            />
+          </label>
+          <div class="cat-card">
+            <div class="list-head">Status</div>
+            <p>Aktiver Modus: <strong id="aiSettingsActiveMode" data-testid="ai-settings-active-mode"><%= aiAvailability.activeMode || 'auto' %></strong></p>
+            <p>Aktiver Provider: <strong id="aiSettingsSelectedProvider" data-testid="ai-settings-selected-provider"><%= aiAvailability.selectedProviderLabel || 'OpenAI' %></strong></p>
+            <p>OpenAI konfiguriert: <strong id="aiSettingsOpenAiConfigured" data-testid="ai-settings-openai-configured"><%= aiAvailability.openaiConfigured ? 'ja' : 'nein' %></strong></p>
+            <p>Ollama konfiguriert: <strong id="aiSettingsOllamaConfigured" data-testid="ai-settings-ollama-configured"><%= aiAvailability.ollamaConfigured ? 'ja' : 'nein' %></strong></p>
+            <p>Ollama erreichbar: <strong id="aiSettingsOllamaReachable" data-testid="ai-settings-ollama-reachable"><%= typeof aiAvailability.ollamaReachable === 'boolean' ? (aiAvailability.ollamaReachable ? 'ja' : 'nein') : 'unbekannt' %></strong></p>
+            <p>Status: <strong id="aiSettingsAvailability" data-testid="ai-settings-availability"><%= aiAvailability.available ? 'verfügbar' : 'nicht verfügbar' %></strong></p>
+            <p class="sub" id="aiSettingsLiveMessage" data-testid="ai-settings-live-message"><%= aiAvailability.message || 'Live-Status wird aktualisiert.' %></p>
+            <p class="sub" id="aiSettingsLastChecked" data-testid="ai-settings-last-checked">Letzte Prüfung: noch keine</p>
+          </div>
+          <p class="sub">Im Modus Auto bleibt OpenAI primär. Bei Quota, 429, Timeout, 5xx oder Konfigurationsfehlern kann Ollama übernehmen.</p>
+          <button class="btn primary" type="submit">Save</button>
+        </form>
+
+        <script>
+          (() => {
+            const activeModeNode = document.getElementById('aiSettingsActiveMode');
+            const selectedProviderNode = document.getElementById('aiSettingsSelectedProvider');
+            const openAiConfiguredNode = document.getElementById('aiSettingsOpenAiConfigured');
+            const ollamaConfiguredNode = document.getElementById('aiSettingsOllamaConfigured');
+            const ollamaReachableNode = document.getElementById('aiSettingsOllamaReachable');
+            const availabilityNode = document.getElementById('aiSettingsAvailability');
+            const liveMessageNode = document.getElementById('aiSettingsLiveMessage');
+            const lastCheckedNode = document.getElementById('aiSettingsLastChecked');
+
+            if (!activeModeNode || !selectedProviderNode || !openAiConfiguredNode || !ollamaConfiguredNode || !ollamaReachableNode || !availabilityNode || !liveMessageNode || !lastCheckedNode) {
+              return;
+            }
+
+            const providerLabel = (provider) => String(provider || '').trim().toLowerCase() === 'ollama' ? 'Ollama' : 'OpenAI';
+            const yesNo = (value) => value === true ? 'ja' : 'nein';
+            const markChecked = () => {
+              const now = new Date();
+              lastCheckedNode.textContent = `Letzte Prüfung: ${now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+            };
+
+            const applyStatus = (payload) => {
+              activeModeNode.textContent = String(payload?.active_mode || payload?.activeMode || 'auto');
+              selectedProviderNode.textContent = providerLabel(payload?.selectedProvider || payload?.provider || 'openai');
+              openAiConfiguredNode.textContent = yesNo(payload?.openai_configured === true || payload?.openaiConfigured === true);
+              ollamaConfiguredNode.textContent = yesNo(payload?.ollama_configured === true || payload?.ollamaConfigured === true);
+              if (payload?.ollama_reachable === true || payload?.ollamaReachable === true) {
+                ollamaReachableNode.textContent = 'ja';
+              } else if (payload?.ollama_reachable === false || payload?.ollamaReachable === false) {
+                ollamaReachableNode.textContent = 'nein';
+              } else {
+                ollamaReachableNode.textContent = 'unbekannt';
+              }
+              availabilityNode.textContent = payload?.available ? 'verfügbar' : 'nicht verfügbar';
+              liveMessageNode.textContent = String(payload?.message || 'Live-Status aktualisiert.');
+              markChecked();
+            };
+
+            const applyFetchError = () => {
+              liveMessageNode.textContent = 'Live-Status konnte nicht geladen werden.';
+              markChecked();
+            };
+
+            let pollTimer = 0;
+
+            const refresh = async () => {
+              try {
+                const response = await fetch('/ai/status', {
+                  headers: { Accept: 'application/json' }
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.ok) {
+                  applyFetchError();
+                  return;
+                }
+                applyStatus(data);
+              } catch (_error) {
+                applyFetchError();
+              }
+            };
+
+            void refresh();
+            pollTimer = window.setInterval(refresh, 15000);
+            window.addEventListener('beforeunload', () => {
+              if (pollTimer) {
+                window.clearInterval(pollTimer);
+              }
+            }, { once: true });
+          })();
+        </script>
+      <% } %>
+
+      <div class="unsaved-bar" hidden>
+        <span>Unsaved changes</span>
+        <div class="composer-tools">
+          <button type="button" class="chip" data-settings-revert="true">Revert</button>
+          <button type="button" class="chip" data-settings-save="true">Save</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="info-rail gradient-card">
+      <% if (section === 'profile') { %>
+        <h3>Preview</h3>
+        <section class="profile-preview-card" id="profilePreviewCard" data-testid="settings-profile-preview-card">
+          <div class="profile-preview-banner" id="profilePreviewBanner" data-testid="settings-profile-preview-banner">
+            <img id="profilePreviewBannerImg" class="profile-preview-banner-image" alt="Banner" hidden />
+            <span id="profilePreviewBannerFallback" class="profile-preview-banner-fallback"></span>
+          </div>
+          <div class="profile-preview-head" data-testid="settings-profile-preview-header">
+            <div class="profile-preview-avatar-wrap">
+              <img id="profilePreviewAvatarImg" class="profile-preview-avatar" alt="Avatar" data-testid="settings-profile-preview-avatar" hidden />
+              <div id="profilePreviewAvatarFallback" class="profile-preview-avatar fallback">A</div>
+              <span id="profilePreviewStatusDot" class="status-dot online"></span>
+            </div>
+            <div class="profile-preview-meta" data-testid="settings-profile-preview-name-block">
+              <h4 id="profilePreviewDisplayName"><%= account.display_name || 'Display Name' %></h4>
+              <p class="sub" id="profilePreviewHandle">@<%= account.username || 'user' %></p>
+            </div>
+          </div>
+          <div class="profile-preview-content">
+            <div class="profile-card">
+              <div class="list-head">Status</div>
+              <p id="profilePreviewStatusText"><%= account.custom_status_emoji || '' %> <%= account.custom_status_text || account.presence_status || 'online' %></p>
+            </div>
+            <div class="profile-card">
+              <div class="list-head">About Me</div>
+              <p id="profilePreviewAbout"><%= account.about_me || 'No bio set.' %></p>
+            </div>
+          </div>
+        </section>
+        <section class="profile-preview-card">
+          <div class="list-head">About+ Preview</div>
+          <div id="settingsAboutPlusPreview"></div>
+        </section>
+      <% } %>
+
+      <% if (section === 'privacy-safety') { %>
+        <h3>Blocked List</h3>
+        <% if (!blocked.length) { %>
+          <div class="cat-card">Niemand blockiert.</div>
+        <% } %>
+        <% blocked.forEach(function(user) { %>
+          <div class="dm-row slim">
+            <span class="avatar"><%= user.display_name.charAt(0) %></span>
+            <div>
+              <strong><%= user.display_name %></strong>
+              <p>@<%= user.username %></p>
+            </div>
+          </div>
+        <% }) %>
+      <% } %>
+
+      <% if (section !== 'profile' && section !== 'privacy-safety') { %>
+        <h3>Settings Info</h3>
+        <div class="cat-card">Änderungen werden nach Save persistent gespeichert.</div>
+      <% } %>
+      <% if (section === 'lan-access') { %>
+        <h3>LAN Hinweise</h3>
+        <div class="cat-card">Nutze im WLAN immer die HTTPS-URL. HTTP sollte nur als Fallback für reine Diagnose genutzt werden.</div>
+        <div class="cat-card">Falls Links nicht erreichbar sind: Firewall-Ports 3000/3443 freigeben.</div>
+      <% } %>
+    </aside>
+  </section>
+</main>
+<%- include('../partials/tail') %>

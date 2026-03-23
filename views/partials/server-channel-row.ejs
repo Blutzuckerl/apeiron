@@ -1,0 +1,81 @@
+<%
+  const isVoice = channel.type === 'voice';
+  const isActive = Boolean(selectedChannel && selectedChannel.id === channel.id);
+  const voiceState = isVoice
+    ? ((voiceBootstrap && voiceBootstrap.channels ? voiceBootstrap.channels : []).find((entry) => Number(entry.id) === Number(channel.id)) || null)
+    : null;
+%>
+<% if (isVoice) { %>
+  <div class="voice-channel-block <%= isActive ? 'active' : '' %>" data-testid="voice-channel-block" data-voice-channel-block="<%= channel.id %>">
+    <a
+      class="dm-row server-channel-link voice-channel-link <%= isActive ? 'active' : '' %>"
+      data-testid="server-channel-link"
+      href="/app/servers/<%= selectedServer.id %>?channel=<%= channel.id %>"
+      data-channel-id="<%= channel.id %>"
+      data-channel-type="voice"
+      data-channel-name="<%= channel.name %>"
+    >
+      <span class="avatar">🔊</span>
+      <div>
+        <strong><%= channel.name %></strong>
+        <p><%= channel.topic || 'Voice-Channel' %></p>
+      </div>
+      <div class="voice-channel-sidecar">
+        <div class="voice-channel-actions" aria-hidden="true">
+          <span class="voice-action-icon"><%= canInvitePeople ? '+' : '·' %></span>
+          <span class="voice-action-icon"><%= canManageChannels ? '⚙' : '·' %></span>
+        </div>
+        <div class="voice-channel-preview" data-testid="voice-channel-preview" data-voice-preview-for="<%= channel.id %>">
+          <% (voiceState && voiceState.participants ? voiceState.participants.slice(0, 3) : []).forEach(function(participant) { %>
+            <span class="voice-mini-avatar">
+              <% if (participant.avatar_url) { %>
+                <img src="<%= participant.avatar_url %>" alt="<%= participant.displayname %>" loading="lazy" />
+              <% } else { %>
+                <span class="voice-mini-fallback"><%= String(participant.displayname || '?').charAt(0).toUpperCase() %></span>
+              <% } %>
+            </span>
+          <% }) %>
+        </div>
+        <span class="voice-channel-count" data-testid="voice-channel-count" data-voice-count-for="<%= channel.id %>"><%= voiceState && voiceState.participants ? voiceState.participants.length : 0 %></span>
+      </div>
+    </a>
+    <div class="voice-channel-members <%= voiceState && voiceState.participants && voiceState.participants.length ? 'is-populated' : '' %>" data-testid="voice-channel-members" data-voice-members-for="<%= channel.id %>">
+      <% if (voiceState && voiceState.participants && voiceState.participants.length) { %>
+        <% voiceState.participants.forEach(function(participant) { %>
+          <div class="voice-member-row <%= participant.user_id === currentUser.id ? 'is-self' : '' %>" data-voice-member-id="<%= participant.user_id %>" data-presence-user-id="<%= participant.user_id %>" data-presence-status="<%= participant.status || 'offline' %>" data-presence-last-seen="<%= participant.last_seen || '' %>">
+            <span class="avatar voice-member-avatar">
+              <% if (participant.avatar_url) { %>
+                <img src="<%= participant.avatar_url %>" alt="<%= participant.displayname %>" loading="lazy" />
+              <% } else { %>
+                <span class="avatar-fallback"><%= String(participant.displayname || '?').charAt(0).toUpperCase() %></span>
+              <% } %>
+              <span class="status-dot <%= participant.status || 'offline' %>" data-presence-dot></span>
+            </span>
+            <span class="voice-member-copy">
+              <span class="voice-member-name"><%= participant.displayname %></span>
+              <span class="voice-member-presence" data-presence-text><%= participant.status_label || (participant.status || 'offline') %></span>
+            </span>
+            <span class="voice-member-flags" aria-hidden="true">
+              <%= participant.muted ? '🎤' : '' %><%= participant.deafened ? '🔇' : '' %>
+            </span>
+          </div>
+        <% }) %>
+      <% } %>
+    </div>
+  </div>
+<% } else { %>
+  <a
+    class="dm-row server-channel-link <%= isActive ? 'active' : '' %>"
+    data-testid="server-channel-link"
+    href="/app/servers/<%= selectedServer.id %>?channel=<%= channel.id %>"
+    data-channel-id="<%= channel.id %>"
+    data-channel-type="text"
+    data-channel-name="<%= channel.name %>"
+  >
+    <span class="avatar">#</span>
+    <div>
+      <strong><%= channel.name %></strong>
+      <p><%= channel.type %> • <%= channel.topic || 'ohne Topic' %></p>
+    </div>
+  </a>
+<% } %>

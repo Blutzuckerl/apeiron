@@ -1,0 +1,578 @@
+<%- include('../partials/head', { title }) %>
+<div class="app-bg"></div>
+<main class="app-shell dm-shell">
+  <%- include('../partials/flash') %>
+
+  <section class="workspace-grid">
+    <%- include('../partials/server-rail', { servers, selectedServer }) %>
+
+    <aside class="nav-rail gradient-card" id="dmNavRail">
+      <input type="hidden" id="dmCurrentUsername" value="<%= currentUser.username %>" />
+      <input type="hidden" id="dmCurrentDisplayName" value="<%= currentUser.display_name || currentUser.username %>" />
+      <input type="hidden" id="dmCurrentAvatarUrl" value="<%= currentUser.avatar_url || '' %>" />
+      <input type="hidden" id="dmActiveThreadType" value="<%= activeThread ? (activeThread.thread_type || 'dm') : '' %>" />
+      <input type="hidden" id="dmActiveAgentSlug" value="<%= activeThread ? (activeThread.agent_slug || '') : '' %>" />
+      <input type="hidden" id="dmAiDisplayName" value="<%= activeThread && activeThread.isAiThread ? activeThread.displayName : 'Sokrates' %>" />
+      <input type="hidden" id="dmAiAvatarUrl" value="<%= activeThread && activeThread.isAiThread ? (activeThread.avatarUrl || '') : '' %>" />
+      <input type="hidden" id="dmAiAvailabilityCode" value="<%= activeThread && activeThread.isAiThread ? (sokratesAvailability.code || '') : '' %>" />
+      <input type="hidden" id="dmAiActiveMode" value="<%= activeThread && activeThread.isAiThread ? (sokratesAvailability.activeMode || 'auto') : '' %>" />
+      <input type="hidden" id="dmAiSelectedProvider" value="<%= activeThread && activeThread.isAiThread ? (sokratesAvailability.selectedProvider || 'openai') : '' %>" />
+      <div class="dm-nav-head dm-nav-headline">
+        <h3>Direktnachrichten</h3>
+        <button
+          type="button"
+          class="chip dm-mobile-close-btn"
+          data-dm-mobile-close-list
+          data-testid="dm-mobile-close-list"
+          aria-label="DM-Liste schließen"
+        >
+          Schließen
+        </button>
+      </div>
+
+      <div class="dm-action-switches" id="dmActionSwitches">
+        <button type="button" class="chip dm-action-btn" data-action-target="find">Finde Nachricht</button>
+        <button type="button" class="chip dm-action-btn" data-action-target="new-dm">Neue Nachricht</button>
+        <button type="button" class="chip dm-action-btn" data-action-target="new-group">Gruppe erstellen</button>
+      </div>
+
+      <div class="dm-action-panel" data-action-panel="find" hidden>
+        <form class="search-row" id="dmFindForm">
+          <input id="dmFindInput" type="search" placeholder="Find Conversation / …" />
+          <button class="btn" type="submit">Suchen</button>
+        </form>
+        <p class="sub shortcut-hint">Shortcut: <code>Ctrl+K</code> oder <code>/</code></p>
+        <p id="dmFindNoResults" class="sub" hidden>Keine Treffer</p>
+      </div>
+
+      <div class="dm-action-panel" data-action-panel="new-dm" hidden>
+        <form method="post" action="/app/home/new-dm" class="new-dm-form" id="dmNewMessageForm">
+          <input type="text" name="username" placeholder="Username (z.B. @einstein)" />
+          <button class="btn primary" type="submit">Neue Nachricht</button>
+        </form>
+        <p id="dmNewMessageError" class="sub" hidden></p>
+      </div>
+
+      <div class="dm-action-panel" data-action-panel="new-group" hidden>
+        <form method="post" action="/app/home/new-group" class="group-create-form" id="dmNewGroupForm">
+          <input type="text" name="title" placeholder="Group Name" />
+          <input type="text" name="iconEmoji" placeholder="Icon" />
+          <input type="text" name="members" placeholder="Members (z.B. @euler, @platon)" />
+          <button class="btn" type="submit">Gruppe erstellen</button>
+        </form>
+        <p id="dmNewGroupError" class="sub" hidden></p>
+      </div>
+
+      <div class="dm-list-scroll" data-testid="dm-nav-scroll">
+      <% if (inboxThreads.length) { %>
+        <p class="list-head">Inbox (Priorität)</p>
+        <% inboxThreads.forEach(function(thread) { %>
+          <% const isDirectThread = !thread.is_group && !thread.isAiThread && thread.directUserId; %>
+          <% const hasSecondaryLine = Boolean(String(thread.secondaryLine || '').trim()); %>
+          <a
+            class="dm-row inbox <%= activeThread && activeThread.id === thread.id ? 'active' : '' %>"
+            data-testid="dm-thread-row"
+            href="/app/home?thread=<%= thread.id %>"
+            <%= isDirectThread ? ('data-presence-user-id="' + thread.directUserId + '" data-presence-status="' + thread.presence + '" data-presence-last-seen="' + (thread.last_seen || '') + '"') : '' %>
+          >
+            <span class="avatar" data-testid="dm-thread-avatar">
+              <% if (!thread.is_group && thread.avatarUrl) { %>
+                <img src="<%= thread.avatarUrl %>" alt="<%= thread.displayName %>" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
+                <span class="avatar-fallback" hidden><%= thread.displayName.charAt(0) %></span>
+              <% } else { %>
+                <span class="avatar-fallback"><%= thread.icon_emoji || thread.displayName.charAt(0) %></span>
+              <% } %>
+              <% if (isDirectThread) { %>
+                <span class="status-dot <%= thread.presence %>" data-presence-dot data-testid="dm-thread-status-dot"></span>
+              <% } %>
+            </span>
+            <div class="dm-row-copy <%= hasSecondaryLine ? '' : 'is-compact' %>">
+              <strong><%= thread.displayName %></strong>
+              <% if (hasSecondaryLine) { %>
+                <p class="dm-row-subline"><%= thread.secondaryLine %></p>
+              <% } %>
+            </div>
+          </a>
+        <% }) %>
+      <% } %>
+
+      <p class="list-head">Aktive DMs</p>
+      <% if (!threads.length) { %>
+        <div class="cat-card empty">Noch keine DMs. Starte eine neue Unterhaltung.</div>
+      <% } %>
+      <div id="activeDmList" data-testid="dm-nav-list">
+        <% threads.forEach(function(thread) { %>
+          <% const isDirectThread = !thread.is_group && !thread.isAiThread && thread.directUserId; %>
+          <% const hasSecondaryLine = Boolean(String(thread.secondaryLine || '').trim()); %>
+          <a
+            class="dm-row <%= activeThread && activeThread.id === thread.id ? 'active' : '' %>"
+            data-testid="dm-thread-row"
+            href="/app/home?thread=<%= thread.id %>"
+            <%= isDirectThread ? ('data-presence-user-id="' + thread.directUserId + '" data-presence-status="' + thread.presence + '" data-presence-last-seen="' + (thread.last_seen || '') + '"') : '' %>
+          >
+            <span class="avatar" data-testid="dm-thread-avatar">
+              <% if (!thread.is_group && thread.avatarUrl) { %>
+                <img src="<%= thread.avatarUrl %>" alt="<%= thread.displayName %>" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
+                <span class="avatar-fallback" hidden><%= thread.displayName.charAt(0) %></span>
+              <% } else { %>
+                <span class="avatar-fallback"><%= thread.icon_emoji || thread.displayName.charAt(0) %></span>
+              <% } %>
+              <% if (isDirectThread) { %>
+                <span class="status-dot <%= thread.presence %>" data-presence-dot data-testid="dm-thread-status-dot"></span>
+              <% } %>
+            </span>
+            <div class="dm-row-copy <%= hasSecondaryLine ? '' : 'is-compact' %>">
+              <strong><%= thread.displayName %></strong>
+              <% if (hasSecondaryLine) { %>
+                <p class="dm-row-subline"><%= thread.secondaryLine %></p>
+              <% } %>
+            </div>
+            <% if (!thread.muted && (thread.unread_count > 0 || thread.mention_count > 0)) { %>
+              <span class="dm-row-indicators" data-testid="dm-thread-indicators">
+                <% if (thread.unread_count > 0) { %>
+                  <span class="unread-dot" title="Ungelesen"></span>
+                <% } %>
+                <% if (thread.mention_count > 0) { %>
+                  <span class="badge mention"><%= thread.mention_count %></span>
+                <% } %>
+              </span>
+            <% } %>
+          </a>
+        <% }) %>
+      </div>
+      </div>
+      <%- include('../partials/sidebar-userbar') %>
+    </aside>
+
+    <section class="chat-main gradient-card" data-testid="dm-chat-main">
+      <div class="chat-top-stack">
+        <header class="chat-head">
+          <div class="chat-head-main">
+            <h2><%= activeThread ? ((activeThread.icon_emoji ? activeThread.icon_emoji + ' ' : '') + activeThread.displayName) : 'Keine Unterhaltung' %></h2>
+          </div>
+          <div class="chat-head-actions">
+            <div class="dm-mobile-head-actions">
+              <button
+                type="button"
+                class="badge dm-mobile-toggle-btn"
+                data-dm-mobile-open-list
+                data-testid="dm-mobile-open-list"
+                aria-label="DM-Liste öffnen"
+                aria-expanded="false"
+              >
+                Liste
+              </button>
+              <button
+                type="button"
+                class="badge dm-mobile-toggle-btn"
+                data-dm-mobile-open-info
+                data-testid="dm-mobile-open-info"
+                aria-label="DM-Info öffnen"
+                aria-expanded="false"
+              >
+                Info
+              </button>
+            </div>
+            <div class="head-badges">
+              <% if (activeThread) { %>
+                <form method="post" action="/app/home/toggle-mute">
+                  <input type="hidden" name="threadId" value="<%= activeThread.id %>" />
+                  <input type="hidden" name="muted" value="<%= activeThread.muted ? '0' : '1' %>" />
+                  <button class="badge" type="submit"><%= activeThread.muted ? 'Unmute' : 'Mute' %></button>
+                </form>
+              <% } %>
+              <% if (activeThread && activeThread.isAiThread) { %>
+                <span class="badge mention">AI</span>
+                <span class="badge" id="dmAiProviderBadge">Provider: <%= sokratesAvailability.selectedProviderLabel || 'OpenAI' %><%= sokratesAvailability.activeMode === 'auto' ? ' (Auto)' : '' %></span>
+              <% } %>
+              <span class="badge fancy">DM View</span>
+            </div>
+          </div>
+        </header>
+
+        <% if (isBlocked) { %>
+          <div class="block-banner">You blocked this user. Keine neuen Nachrichten möglich.</div>
+        <% } %>
+        <div
+          id="dmAiAvailabilityBanner"
+          class="block-banner"
+          data-ai-availability-code="<%= activeThread && activeThread.isAiThread ? (sokratesAvailability.code || '') : '' %>"
+          hidden
+        ></div>
+      </div>
+
+      <div class="timeline-wrap" data-testid="dm-timeline-wrap">
+        <div class="timeline" id="timeline" data-testid="dm-timeline">
+          <% if (!activeThread) { %>
+            <div class="cat-card empty">Wähle oder erstelle eine DM.</div>
+          <% } %>
+
+          <% if (activeThread && isBlocked && currentUserSettings.block_history_mode === 'hidden') { %>
+            <div class="cat-card empty">Historie ist für blockierte User ausgeblendet.</div>
+          <% } else { %>
+            <% threadMessages.forEach(function(message) { %>
+              <% const mentionSelf = message.content.toLowerCase().includes('@' + currentUser.username.toLowerCase()); %>
+              <% const avatarSource = String(message.author_avatar_url || '').trim(); %>
+              <% const fallbackAvatar = String(message.author_display_name || message.author_username || '?').trim().slice(0, 2).toUpperCase() || '?'; %>
+              <article
+                id="msg-<%= message.id %>"
+                class="msg <%= message.author_id === currentUser.id ? 'own' : '' %> <%= mentionSelf ? 'mention-hit' : '' %> <%= focusMessageId === message.id ? 'focus-hit' : '' %>"
+                data-testid="dm-message"
+                data-message-id="<%= message.id %>"
+                data-author-id="<%= message.author_id %>"
+                data-is-own="<%= message.author_id === currentUser.id ? '1' : '0' %>"
+                data-context-type="dm"
+                data-context-id="<%= activeThread.id %>"
+                data-can-delete-any="0"
+                data-has-text="<%= String(message.content || '').trim() ? '1' : '0' %>"
+                data-has-attachments="<%= (message.attachments && message.attachments.length) || (message.gifs && message.gifs.length) ? '1' : '0' %>"
+                data-is-system-message="<%= message.kind === 'system' ? '1' : '0' %>"
+                data-message-text="<%- encodeURIComponent(String(message.content || '')) %>"
+                data-emoji-entities="<%= encodeURIComponent(JSON.stringify(message.emoji_entities || [])) %>"
+              >
+                <div class="avatar msg-avatar">
+                  <% if (avatarSource) { %>
+                    <img src="<%= avatarSource %>" alt="<%= message.author_display_name %>" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
+                    <span class="avatar-fallback" hidden><%= fallbackAvatar %></span>
+                  <% } else { %>
+                    <span class="avatar-fallback"><%= fallbackAvatar %></span>
+                  <% } %>
+                </div>
+                <div class="bubble">
+                  <div class="meta"><strong><%= message.author_display_name %></strong> <span><%= message.created_at %><% if (message.edited_at) { %> <span class="edited-mark">(edited)</span><% } %></span></div>
+                  <% if (message.reply_to_message) { %>
+                    <button type="button" class="msg-reply-preview" data-jump-to-message="<%= message.reply_to_message.id %>">
+                      <strong><%= message.reply_to_message.author_display_name %></strong>
+                      <span><%= message.reply_to_message.missing ? 'Deleted message' : (String(message.reply_to_message.content || '').trim() || 'Attachment') %></span>
+                    </button>
+                  <% } %>
+                  <% if (String(message.content || '').trim()) { %>
+                    <p class="msg-text"><%= message.content %></p>
+                  <% } %>
+                  <% if (message.attachments && message.attachments.length) { %>
+                    <div class="msg-attachments">
+                      <% message.attachments.forEach(function(att) { %>
+                        <% if ((att.kind === 'image' || att.kind === 'gif') && String(att.url || '').trim()) { %>
+                          <a class="msg-attachment media" href="<%= att.url %>" target="_blank" rel="noopener noreferrer">
+                            <img src="<%= att.url %>" alt="<%= att.filename || 'attachment' %>" loading="lazy" />
+                          </a>
+                        <% } else if (att.kind === 'video' && String(att.url || '').trim()) { %>
+                          <video class="msg-video" controls preload="metadata">
+                            <source src="<%= att.url %>" type="<%= att.mime_type || 'video/mp4' %>" />
+                          </video>
+                        <% } else if (String(att.url || '').trim()) { %>
+                          <a class="msg-attachment file" href="<%= att.url %>" target="_blank" rel="noopener noreferrer">
+                            <strong><%= att.filename || 'Datei' %></strong>
+                            <span><%= att.file_size ? Math.ceil(att.file_size / 1024) + ' KB' : 'Datei' %></span>
+                          </a>
+                        <% } %>
+                      <% }) %>
+                    </div>
+                  <% } %>
+                  <% if (message.gifs && message.gifs.length) { %>
+                    <div class="msg-attachments">
+                      <% message.gifs.forEach(function(gif) { %>
+                        <% if (gif.deleted || !String(gif.url || '').trim()) { %>
+                          <div class="msg-attachment media deleted-gif-card" data-message-gif-id="<%= gif.id || 0 %>" data-gif-deleted="1">
+                            <div class="deleted-gif-placeholder">
+                              <strong>GIF deleted</strong>
+                              <span><%= gif.name || 'Removed from library' %></span>
+                            </div>
+                          </div>
+                        <% } else { %>
+                          <a
+                            class="msg-attachment media"
+                            data-message-gif-id="<%= gif.id || 0 %>"
+                            data-message-gif-name="<%= gif.name || 'gif' %>"
+                            data-message-gif-tags="<%= gif.tags || '' %>"
+                            data-message-gif-source="<%= gif.source || gif.sourceLabel || 'Message' %>"
+                            href="<%= gif.url %>"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <img src="<%= gif.url %>" alt="<%= gif.name || 'gif' %>" loading="lazy" />
+                          </a>
+                        <% } %>
+                      <% }) %>
+                    </div>
+                  <% } %>
+                  <% if (message.reactions && message.reactions.length) { %>
+                    <div class="msg-reaction-row">
+                      <% message.reactions.forEach(function(reaction) { %>
+                        <button type="button" class="msg-reaction-chip" data-reaction-emoji="<%= reaction.emoji %>" data-reaction-count="<%= reaction.count %>">
+                          <span><%= reaction.emoji %></span>
+                          <small><%= reaction.count %></small>
+                        </button>
+                      <% }) %>
+                    </div>
+                  <% } %>
+                  <% if (message.author_is_deactivated) { %>
+                    <p class="sub">Dieser Account wurde deaktiviert.</p>
+                  <% } %>
+                </div>
+              </article>
+            <% }) %>
+          <% } %>
+        </div>
+        <button type="button" class="chip new-msg-indicator" id="newMessagesIndicator" hidden>New messages</button>
+      </div>
+
+      <%- include('../partials/chat-composer', {
+        composerAction: '/app/home/message',
+        composerFormId: 'dmComposerForm',
+        composerContextFieldName: 'threadId',
+        composerContextFieldValue: activeThread ? activeThread.id : '',
+        composerPlaceholder: activeThread ? (activeThread.isAiThread ? 'Frage Sokrates... Enter sendet, Shift+Enter neue Zeile' : 'Nachricht schreiben... Enter sendet, Shift+Enter neue Zeile') : 'Wähle zuerst eine Unterhaltung…',
+        composerDisabled: !activeThread || isBlocked || (activeThread && activeThread.isAiThread && sokratesAvailability.code === 'CONFIG_ERROR'),
+        composerCanUploadFiles: Boolean(activeThread && !isBlocked),
+        composerSubmitLabel: 'Senden',
+        composerHint: activeThread ? (isBlocked ? 'You blocked this user. Nachrichten sind deaktiviert.' : '') : 'Kein aktiver Chat',
+        userEmojis
+      }) %>
+      <script id="userEmojiLibraryData" type="application/json"><%- JSON.stringify(userEmojis || []) %></script>
+      <script id="emojiPreferenceData" type="application/json"><%- JSON.stringify(emojiPickerState || { favorites: [], recents: [] }) %></script>
+    </section>
+
+    <aside class="info-rail gradient-card" data-testid="dm-info-panel">
+      <div class="dm-info-headline">
+        <h3>DM-Info</h3>
+        <button
+          type="button"
+          class="chip dm-mobile-close-btn"
+          data-dm-mobile-close-info
+          data-testid="dm-mobile-close-info"
+          aria-label="DM-Info schließen"
+        >
+          Schließen
+        </button>
+      </div>
+      <% if (!activeThread) { %>
+        <div class="cat-card empty">Kein Chat ausgewählt.</div>
+      <% } %>
+
+      <% if (activeThread && activeThread.is_group) { %>
+        <p class="sub">Group • <%= activeThread.participants.length %> Teilnehmer</p>
+        <% const groupMembers = activeThread.participants; %>
+        <% const groupOnlineMembers = groupMembers.filter((member) => member.presence !== 'offline'); %>
+        <% const groupOfflineMembers = groupMembers.filter((member) => member.presence === 'offline'); %>
+        <% const canManageGroupMembers = activeThread.created_by === currentUser.id; %>
+        <% const orderedGroupMembers = groupOnlineMembers.concat(groupOfflineMembers); %>
+        <section class="profile-panel group-profile-panel" data-group-dm-card data-testid="group-info-panel">
+          <div class="profile-banner group-profile-banner" data-testid="group-info-banner">
+            <span class="profile-banner-fallback"></span>
+          </div>
+          <div class="profile-panel-body">
+            <div class="profile-head">
+              <div class="profile-avatar-wrap" data-testid="group-info-avatar">
+                <div class="profile-avatar fallback group-profile-avatar"><%= activeThread.icon_emoji || (activeThread.title || 'G').charAt(0) %></div>
+              </div>
+              <div class="profile-meta">
+                <div class="profile-title-row">
+                  <h4 id="dmInfoGroupName"><%= activeThread.title || 'Untitled Group' %></h4>
+                  <button class="chip icon-only" type="button" title="Group Settings" aria-expanded="false" data-testid="group-dm-edit-toggle" data-group-edit-toggle>✎</button>
+                </div>
+                <p class="sub">Group DM</p>
+                <p class="profile-status-line">Members • <%= groupMembers.length %></p>
+              </div>
+            </div>
+
+            <div class="group-edit-shell" data-testid="group-dm-edit-panel" data-group-edit-panel hidden>
+              <div class="profile-card">
+                <div class="profile-card-headline">
+                  <div class="list-head">Group Settings</div>
+                  <button class="chip" type="button" data-group-edit-close>Cancel</button>
+                </div>
+                <form method="post" action="/app/home/group/update" class="group-edit-form">
+                  <input type="hidden" name="threadId" value="<%= activeThread.id %>" />
+                  <input type="text" name="title" value="<%= activeThread.title || '' %>" placeholder="Group Name" />
+                  <input type="text" name="iconEmoji" value="<%= activeThread.icon_emoji || '' %>" placeholder="Group Icon" />
+                  <button class="btn" type="submit">Save</button>
+                </form>
+
+                <form method="post" action="/app/home/group/add-member" class="group-add-form">
+                  <input type="hidden" name="threadId" value="<%= activeThread.id %>" />
+                  <input type="text" name="username" placeholder="Teilnehmer hinzufügen (@name)" required />
+                  <div class="profile-action-row">
+                    <button class="btn" type="submit">Add Member</button>
+                    <button class="chip" type="button" data-group-edit-close>Close</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <div class="profile-card group-members-card">
+              <div class="profile-card-headline">
+                <h4 data-testid="dm-members-header">Members — <%= groupMembers.length %></h4>
+                <p class="sub"><%= groupOnlineMembers.length %> online • <%= groupOfflineMembers.length %> offline</p>
+              </div>
+              <div class="group-members-list" data-testid="group-members-list">
+        <% orderedGroupMembers.forEach(function(member) { %>
+          <% const groupMemberSubline = member.custom_status_line || ('@' + member.username); %>
+          <div class="dm-row slim server-member-row group-member-row" data-testid="member-row" data-member-menu-for="group-member-<%= member.id %>" tabindex="0" role="button" aria-haspopup="menu" data-presence-user-id="<%= member.id %>" data-presence-status="<%= member.presence %>" data-presence-last-seen="<%= member.last_seen || '' %>">
+            <span class="avatar member-avatar" data-testid="member-avatar">
+              <% if (member.avatar_url) { %>
+                <img src="<%= member.avatar_url %>" alt="<%= member.display_name %>" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
+                <span class="avatar-fallback" hidden><%= member.display_name.charAt(0) %></span>
+              <% } else { %>
+                <span class="avatar-fallback"><%= member.display_name.charAt(0) %></span>
+              <% } %>
+              <span class="status-dot <%= member.presence %>" data-presence-dot></span>
+            </span>
+            <div class="group-member-copy dm-row-copy">
+              <strong><%= member.display_name %></strong>
+              <p><%= groupMemberSubline %></p>
+            </div>
+            <button class="chip icon-only member-row-menu-trigger" type="button" aria-label="Member Actions" data-member-menu-trigger="group-member-<%= member.id %>">⋮</button>
+            <div class="member-context gradient-card" id="group-member-<%= member.id %>" data-testid="member-context-menu" hidden>
+              <form method="post" action="/app/home/new-dm">
+                <input type="hidden" name="username" value="@<%= member.username %>" />
+                <button type="submit" class="chip">Message</button>
+              </form>
+              <button type="button" class="chip" data-open-full-profile="<%= member.id %>">View Profile</button>
+              <button type="button" class="chip" data-mention="@<%= member.username %>">Mention</button>
+              <form method="post" action="/app/friends/block">
+                <input type="hidden" name="handle" value="@<%= member.username %>" />
+                <button type="submit" class="chip danger">Block</button>
+              </form>
+              <% if (canManageGroupMembers && member.id !== currentUser.id) { %>
+                <form method="post" action="/app/home/group/remove-member">
+                  <input type="hidden" name="threadId" value="<%= activeThread.id %>" />
+                  <input type="hidden" name="userId" value="<%= member.id %>" />
+                  <button type="submit" class="chip danger" data-testid="member-remove-button">Remove</button>
+                </form>
+              <% } %>
+              <button type="button" class="chip is-disabled" disabled title="Not implemented">Report</button>
+            </div>
+          </div>
+        <% }) %>
+              </div>
+            </div>
+          </div>
+        </section>
+      <% } %>
+
+      <% if (activeThread && activeThread.isAiThread) { %>
+        <section class="profile-panel" data-testid="ai-dm-info-card">
+          <div class="profile-banner" data-testid="ai-dm-info-banner">
+            <% if (sokratesProfile && sokratesProfile.banner_url) { %>
+              <img class="profile-banner-image" src="<%= sokratesProfile.banner_url %>" alt="Sokrates Banner" loading="lazy" data-fallback-src="<%= sokratesProfile.banner_fallback_url || '' %>" onerror="if(!this.dataset.failed&&this.dataset.fallbackSrc){this.dataset.failed='1';this.src=this.dataset.fallbackSrc;return;}this.hidden=true;this.nextElementSibling.hidden=false;" />
+              <span class="profile-banner-fallback" hidden></span>
+            <% } else { %>
+              <span class="profile-banner-fallback"></span>
+            <% } %>
+          </div>
+            <div class="profile-panel-body">
+              <div class="profile-head" data-testid="ai-dm-info-header">
+                <div class="profile-avatar-wrap" data-testid="ai-dm-info-avatar">
+                  <% if (sokratesProfile && sokratesProfile.avatar_url) { %>
+                    <img class="profile-avatar" src="<%= sokratesProfile.avatar_url %>" alt="Sokrates" loading="lazy" data-fallback-src="<%= sokratesProfile.avatar_fallback_url || '' %>" onerror="if(!this.dataset.failed&&this.dataset.fallbackSrc){this.dataset.failed='1';this.src=this.dataset.fallbackSrc;return;}this.hidden=true;this.nextElementSibling.hidden=false;" />
+                    <div class="profile-avatar fallback" hidden>Σ</div>
+                  <% } else { %>
+                    <div class="profile-avatar fallback">Σ</div>
+                  <% } %>
+                  <span class="status-dot online"></span>
+                </div>
+                <div class="profile-meta" data-testid="ai-dm-info-name-block">
+                  <div class="profile-title-row">
+                    <h4>Sokrates</h4>
+                    <span class="profile-badge">AI DM</span>
+                  </div>
+                <p class="sub">@sokrates</p>
+                <p class="profile-status-line">online</p>
+              </div>
+            </div>
+            <div class="profile-content-stack">
+              <div class="profile-card">
+                <div class="list-head">About Me</div>
+                <p class="profile-copy"><%= sokratesProfile ? sokratesProfile.about_me : '' %></p>
+              </div>
+
+              <button class="btn primary" type="button" data-testid="view-full-profile-button" data-open-full-profile="<%= sokratesProfile ? sokratesProfile.id : '' %>">View Full Profile</button>
+            </div>
+          </div>
+        </section>
+      <% } %>
+
+      <% if (activeThread && !activeThread.is_group && !activeThread.isAiThread) { %>
+        <% if (!directProfile) { %>
+          <section class="profile-panel loading">
+            <div class="profile-banner skeleton"></div>
+            <div class="profile-avatar skeleton"></div>
+            <div class="profile-line skeleton"></div>
+            <div class="profile-line short skeleton"></div>
+          </section>
+        <% } else { %>
+          <section class="profile-panel" data-testid="user-dm-info-card" data-presence-user-id="<%= directProfile.id %>" data-presence-status="<%= directProfile.presence %>" data-presence-last-seen="<%= directProfile.last_seen || '' %>">
+            <div class="profile-banner" data-testid="user-dm-info-banner">
+              <% if (directProfile.banner_url) { %>
+                <img class="profile-banner-image" src="<%= directProfile.banner_url %>" alt="Banner" loading="lazy" data-fallback-src="<%= directProfile.banner_fallback_url || '' %>" onerror="if(!this.dataset.failed&&this.dataset.fallbackSrc){this.dataset.failed='1';this.src=this.dataset.fallbackSrc;return;}this.hidden=true;this.nextElementSibling.hidden=false;" />
+                <span class="profile-banner-fallback" hidden></span>
+              <% } else { %>
+                <span class="profile-banner-fallback"></span>
+              <% } %>
+            </div>
+            <div class="profile-panel-body">
+              <div class="profile-head" data-testid="user-dm-info-header">
+                <div class="profile-avatar-wrap" data-testid="user-dm-info-avatar">
+                  <% if (directProfile.avatar_url) { %>
+                    <img class="profile-avatar" src="<%= directProfile.avatar_url %>" alt="Avatar" loading="lazy" data-fallback-src="<%= directProfile.avatar_fallback_url || '' %>" onerror="if(!this.dataset.failed&&this.dataset.fallbackSrc){this.dataset.failed='1';this.src=this.dataset.fallbackSrc;return;}this.hidden=true;this.nextElementSibling.hidden=false;" />
+                    <div class="profile-avatar fallback" hidden><%= directProfile.display_name.charAt(0) %></div>
+                  <% } else { %>
+                    <div class="profile-avatar fallback"><%= directProfile.display_name.charAt(0) %></div>
+                  <% } %>
+                  <span class="status-dot <%= directProfile.presence %>" data-presence-dot></span>
+                </div>
+                <div class="profile-meta" data-testid="user-dm-info-name-block">
+                  <h4 id="dmInfoProfileName"><%= directProfile.display_name %></h4>
+                  <p class="sub">@<%= directProfile.username %></p>
+                  <p class="profile-status-line" data-presence-text><%= directProfile.presence_label %></p>
+                </div>
+              </div>
+
+              <div class="profile-content-stack">
+                <div class="profile-card">
+                  <div class="list-head">About Me</div>
+                  <p class="profile-copy"><%= directProfile.about_me || 'No bio set.' %></p>
+                </div>
+
+                <div class="profile-card">
+                  <div class="list-head">Member since</div>
+                  <p><%= directProfile.created_at || 'Unknown' %></p>
+                </div>
+
+                <div class="profile-panel-links">
+                  <button class="dm-row slim profile-link" type="button">
+                    <span class="avatar">#</span>
+                    <div>
+                      <strong>Mutual Servers</strong>
+                      <p><%= directProfileMeta ? directProfileMeta.mutualServers : 0 %></p>
+                    </div>
+                  </button>
+
+                  <button class="dm-row slim profile-link" type="button">
+                    <span class="avatar">@</span>
+                    <div>
+                      <strong>Mutual Friends</strong>
+                      <p><%= directProfileMeta ? directProfileMeta.mutualFriends : 0 %></p>
+                    </div>
+                  </button>
+                </div>
+
+                <button class="btn primary" type="button" data-testid="view-full-profile-button" data-open-full-profile="<%= directProfile.id %>">View Full Profile</button>
+              </div>
+            </div>
+          </section>
+        <% } %>
+      <% } %>
+    </aside>
+    <button
+      type="button"
+      class="dm-mobile-backdrop"
+      data-dm-mobile-backdrop
+      data-testid="dm-mobile-backdrop"
+      aria-label="Panels schließen"
+      hidden
+    ></button>
+  </section>
+</main>
+<%- include('../partials/tail') %>

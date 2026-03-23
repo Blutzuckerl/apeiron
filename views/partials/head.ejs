@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %> | Apeiron</title>
+  <link rel="icon" type="image/png" href="/public/ressources/Small.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/public/css/main.css" />
+</head>
+<%
+  const prefs = typeof uiPrefs !== 'undefined' && uiPrefs ? uiPrefs : null;
+  const theme = (prefs && prefs.appearance_theme) ? prefs.appearance_theme : 'dark';
+  const density = (prefs && prefs.appearance_density) ? prefs.appearance_density : 'cozy';
+  const reducedMotion = (prefs && prefs.appearance_reduced_motion) ? '1' : '0';
+  const fontScale = (prefs && prefs.appearance_font_scale) ? prefs.appearance_font_scale : 100;
+%>
+<body
+  data-theme="<%= theme %>"
+  data-density="<%= density %>"
+  data-reduced-motion="<%= reducedMotion %>"
+  data-app-test-mode="<%= appTestMode ? '1' : '0' %>"
+  data-current-user-id="<%= currentUser ? currentUser.id : '' %>"
+  style="--app-font-scale:<%= fontScale %>%;"
+>
